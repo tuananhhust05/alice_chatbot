@@ -76,6 +76,103 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
+  /* Space-themed glass effect */
+  .space-glass {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 15, 35, 0.85) 0%,
+      rgba(10, 10, 25, 0.9) 50%,
+      rgba(20, 15, 40, 0.85) 100%
+    );
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+      0 0 40px rgba(94, 92, 230, 0.1);
+  }
+
+  /* Cosmic glow effect */
+  .cosmic-glow {
+    position: relative;
+  }
+  
+  .cosmic-glow::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(10, 132, 255, 0.4) 0%,
+      rgba(94, 92, 230, 0.3) 50%,
+      rgba(191, 90, 242, 0.4) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .cosmic-glow:hover::before {
+    opacity: 1;
+  }
+
+  /* Nebula button effect */
+  .nebula-btn {
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.2) 0%, rgba(94, 92, 230, 0.2) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .nebula-btn:hover {
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.3) 0%, rgba(94, 92, 230, 0.3) 100%);
+    border-color: rgba(10, 132, 255, 0.4);
+    box-shadow: 0 0 20px rgba(10, 132, 255, 0.3), 0 0 40px rgba(94, 92, 230, 0.2);
+  }
+
+  /* Star pulse animation */
+  .star-pulse {
+    animation: starPulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes starPulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+
+  /* Aurora border effect */
+  .aurora-border {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .aurora-border::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg 60deg,
+      rgba(10, 132, 255, 0.1) 60deg 120deg,
+      transparent 120deg 180deg,
+      rgba(191, 90, 242, 0.1) 180deg 240deg,
+      transparent 240deg 300deg,
+      rgba(94, 92, 230, 0.1) 300deg 360deg
+    );
+    animation: auroraRotate 8s linear infinite;
+    z-index: -1;
+  }
+  
+  @keyframes auroraRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
   .hover-lift {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }

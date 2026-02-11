@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FiMessageSquare, FiZap, FiShield, FiGlobe, FiArrowRight, FiCheck } from 'react-icons/fi';
+import SpaceBackground from '../components/SpaceBackground';
 
 interface LandingPageProps {
   onLoginClick: () => void;
@@ -21,10 +22,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-apple-bg overflow-x-hidden">
+    <div className="min-h-screen bg-black overflow-x-hidden">
+      {/* 3D Space Background */}
+      <SpaceBackground />
+      
       {/* Navigation */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrollY > 50 ? 'glass-effect glass-border' : 'bg-transparent'
+        scrollY > 50 ? 'space-glass border-b border-white/10' : 'bg-transparent'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
@@ -36,7 +40,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
             </div>
             <button
               onClick={onLoginClick}
-              className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-full bg-apple-accent hover:bg-apple-accentHover text-white text-sm sm:text-base font-medium transition-all duration-200 hover:scale-105 active:scale-95"
+              className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-[#0A84FF] via-[#5E5CE6] to-[#BF5AF2] hover:shadow-[0_0_20px_rgba(94,92,230,0.5)] text-white text-sm sm:text-base font-medium transition-all duration-300 hover:scale-105 active:scale-95"
             >
               Login
             </button>
@@ -46,12 +50,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-apple-bg via-apple-bg to-apple-surface" />
-        
-        {/* Animated gradient orbs */}
-        <div className="absolute top-1/4 left-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-apple-accent/20 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-purple-500/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+        {/* Background is now handled by SpaceBackground component */}
         
         <div className={`relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center transition-all duration-1000 ${
           isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
@@ -207,9 +206,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-gradient-to-b from-apple-surface to-apple-bg">
+      <section className="py-16 sm:py-24 lg:py-32 relative z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-apple-text mb-4 sm:mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
             Ready to Get Started?
           </h2>
           <p className="text-base sm:text-lg text-apple-secondary mb-8 sm:mb-10 max-w-2xl mx-auto">
@@ -218,7 +217,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           </p>
           <button
             onClick={onLoginClick}
-            className="group inline-flex items-center gap-2 px-8 sm:px-10 py-3 sm:py-4 rounded-full bg-white text-black text-base sm:text-lg font-semibold transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-white/20"
+            className="group inline-flex items-center gap-2 px-8 sm:px-10 py-3 sm:py-4 rounded-full bg-gradient-to-r from-[#0A84FF] via-[#5E5CE6] to-[#BF5AF2] text-white text-base sm:text-lg font-semibold transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-[0_0_30px_rgba(94,92,230,0.5)]"
           >
             Start Chatting Now
             <FiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -227,14 +226,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 sm:py-12 bg-apple-bg border-t border-apple-border">
+      <footer className="py-8 sm:py-12 relative z-10 border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-[#0A84FF] via-[#5E5CE6] to-[#BF5AF2] flex items-center justify-center">
                 <FiMessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
               </div>
-              <span className="text-base sm:text-lg font-semibold text-apple-text">Alice AI</span>
+              <span className="text-base sm:text-lg font-semibold text-white">Alice AI</span>
             </div>
             <p className="text-xs sm:text-sm text-apple-secondary">
               © 2024 Alice AI. All rights reserved.
@@ -263,14 +262,14 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, del
 
   return (
     <div
-      className={`group p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl bg-apple-elevated/50 border border-apple-border hover:border-apple-accent/50 transition-all duration-500 hover:scale-[1.02] ${
+      className={`group p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl space-glass border border-white/10 hover:border-purple-500/50 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(94,92,230,0.2)] ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
       }`}
     >
-      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center mb-4 sm:mb-6 text-white group-hover:scale-110 transition-transform duration-300">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#0A84FF] via-[#5E5CE6] to-[#BF5AF2] flex items-center justify-center mb-4 sm:mb-6 text-white group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-purple-500/30">
         {icon}
       </div>
-      <h3 className="text-lg sm:text-xl font-semibold text-apple-text mb-2 sm:mb-3">{title}</h3>
+      <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 sm:mb-3">{title}</h3>
       <p className="text-sm sm:text-base text-apple-secondary leading-relaxed">{description}</p>
     </div>
   );

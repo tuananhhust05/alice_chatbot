@@ -268,18 +268,18 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const canSend = (input.trim() || attachedFile) && !isLoading && !isStreaming && !isExtractingFile;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto">
         {!hasMessages ? (
           /* Empty state */
           <div className="h-full flex flex-col items-center justify-center px-4 pt-14 lg:pt-4">
             <div className="text-center mb-6 sm:mb-8 animate-fade-in">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-[#0A84FF] to-[#5E5CE6] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-apple-accent/20">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-[#0A84FF] via-[#5E5CE6] to-[#BF5AF2] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/30 star-pulse">
                 <HiSparkles className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
               </div>
               <h1 className="text-xl sm:text-2xl font-semibold text-white mb-2">Hello! I'm Alice</h1>
-              <p className="text-apple-secondary text-sm">How can I help you today?</p>
+              <p className="text-apple-secondary text-sm">Your cosmic AI assistant</p>
             </div>
 
             <div className="w-full max-w-2xl space-y-2 px-2 sm:px-0">
@@ -288,7 +288,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   key={index}
                   onClick={() => handleSend(suggestion.text)}
                   disabled={isLoading || isStreaming}
-                  className="w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl bg-apple-surface glass-border hover:bg-apple-elevated transition-all duration-200 group text-left touch-target"
+                  className="w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl space-glass cosmic-glow border border-white/10 hover:border-white/20 transition-all duration-300 group text-left touch-target"
                 >
                   <suggestion.icon className="w-5 h-5 text-apple-accent flex-shrink-0" />
                   <span className="text-sm text-apple-secondary group-hover:text-white transition-colors line-clamp-2">
@@ -321,10 +321,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       </div>
 
       {/* Input area */}
-      <div className="bg-black pb-3 pt-2 safe-area-bottom">
+      <div className="bg-transparent pb-3 pt-2 safe-area-bottom relative z-20">
         <div className="max-w-3xl mx-auto w-full px-3 sm:px-4">
-          {/* Unified input container - ChatGPT style */}
-          <div className="relative rounded-2xl sm:rounded-3xl bg-apple-surface border border-apple-border focus-within:border-apple-accent/40 transition-colors">
+          {/* Unified input container - Space themed */}
+          <div className="relative rounded-2xl sm:rounded-3xl space-glass border border-white/15 focus-within:border-purple-500/50 transition-all duration-300 focus-within:shadow-[0_0_30px_rgba(94,92,230,0.3)]">
             {/* Attached file indicator */}
             {attachedFile && (
               <div className="flex items-center gap-2 mx-2 sm:mx-3 mt-2 sm:mt-3 mb-0 px-2 sm:px-3 py-2 rounded-lg sm:rounded-xl bg-apple-accent/10 text-apple-accent text-xs">
@@ -381,10 +381,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 disabled={!canSend}
                 className={`
                   flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full mb-0.5
-                  transition-all duration-200 touch-target
+                  transition-all duration-300 touch-target
                   ${canSend
-                    ? 'bg-white text-black hover:bg-white/90 scale-100'
-                    : 'bg-apple-elevated text-apple-tertiary scale-95 opacity-50'
+                    ? 'bg-gradient-to-r from-[#0A84FF] via-[#5E5CE6] to-[#BF5AF2] text-white hover:shadow-[0_0_20px_rgba(94,92,230,0.5)] scale-100'
+                    : 'bg-white/10 text-apple-tertiary scale-95 opacity-50'
                   }
                 `}
               >

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
+import SpaceBackground from '../components/SpaceBackground';
 import { Conversation, ConversationDetail, Message } from '../types';
 import { getConversations, getConversation, deleteConversation } from '../api/chat';
 import { HiOutlineBars3 } from 'react-icons/hi2';
@@ -119,7 +120,10 @@ const ChatPage: React.FC = () => {
   }, [fetchConversations]);
 
   return (
-    <div className="h-screen h-[100dvh] w-screen flex bg-black overflow-hidden">
+    <div className="h-screen h-[100dvh] w-screen flex bg-black overflow-hidden relative">
+      {/* 3D Space Background */}
+      <SpaceBackground />
+      
       {/* Mobile menu button - fixed position, hide when sidebar is open */}
       {!sidebarOpen && (
         <button

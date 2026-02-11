@@ -74,8 +74,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         className={`
           fixed lg:relative z-40 h-full
           w-[280px] sm:w-[300px] lg:w-72 flex flex-col
-          bg-apple-surface/95 backdrop-blur-xl
-          border-r border-apple-border
+          space-glass backdrop-blur-2xl
+          border-r border-white/10
           transition-transform duration-300 ease-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           safe-area-inset
