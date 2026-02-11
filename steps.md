@@ -7,10 +7,10 @@
 - Error handling + retry ( tocco.earth) ( phải có ochestrator process xử lý retry chứ nhỉ ) ( retry queue vẫn dùng service kafka, Dead Letter Queue dùng lại mongodb service) ( done )
 - Unit test +  Unit test report ( done )
 - Rà soát 1 lượt lỗ hổng bảo mật , ratelimit ( done )
-- Check upload rag doc ( có upload thẳng lên không , upload xong phải sửa ở frontend )
+- Check upload rag doc ( có upload thẳng lên không , upload xong phải sửa ở frontend ) ( done)
 - Deploy + retest 
 - Define functions for each module ( especial dataflow ( handle and save analystic data ) ) ( done )
-- Achitecture chart
+- Achitecture chart ( done )
 - Scale Plan
 - Testing Plan ( just create a plan )
   + Manual test by simulating browser 
