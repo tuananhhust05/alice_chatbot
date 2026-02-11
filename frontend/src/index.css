@@ -17,6 +17,7 @@
     height: -webkit-fill-available;
     /* Safari smooth scrolling */
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -24,34 +25,21 @@
       'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Dark theme by default */
     background: #000000;
     color: #ffffff;
-    height: 100%;
-    height: 100dvh;
-    /* Fallback for browsers without dvh support */
-    height: -webkit-fill-available;
+    min-height: 100%;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
     /* Prevent pull-to-refresh on mobile */
-    overscroll-behavior: none;
-    /* Prevent body scroll when keyboard is open */
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
+    overscroll-behavior-y: none;
     /* Safari text rendering */
     text-rendering: optimizeLegibility;
   }
 
-  /* Light theme support */
-  html.light body {
-    background: #f5f5f7;
-    color: #1d1d1f;
-  }
-
   #root {
-    height: 100%;
-    height: 100dvh;
-    height: -webkit-fill-available;
-    overflow: hidden;
+    min-height: 100%;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
   }
 
   /* iOS Safari notch support */
@@ -508,81 +496,18 @@ html {
 }
 
 /* ============================================
-   Light Theme Overrides
-   ============================================ */
-html.light .space-glass {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(245, 245, 247, 0.95) 50%,
-    rgba(255, 255, 255, 0.9) 100%
-  );
-  box-shadow: 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
-    0 4px 30px rgba(0, 0, 0, 0.1);
-}
-
-html.light .glass-effect {
-  background: rgba(255, 255, 255, 0.85);
-}
-
-html.light .glass-border {
-  border-color: rgba(0, 0, 0, 0.1);
-}
-
-/* Light theme text colors */
-html.light .text-white {
-  color: #1d1d1f;
-}
-
-html.light .text-apple-secondary {
-  color: #6e6e73;
-}
-
-html.light .text-apple-tertiary {
-  color: #86868b;
-}
-
-/* Light theme backgrounds */
-html.light .bg-black {
-  background-color: #f5f5f7;
-}
-
-html.light .bg-apple-surface {
-  background-color: #ffffff;
-}
-
-html.light .bg-apple-elevated {
-  background-color: #f5f5f7;
-}
-
-/* Light theme borders */
-html.light .border-white\/10,
-html.light .border-white\/15 {
-  border-color: rgba(0, 0, 0, 0.1);
-}
-
-/* ============================================
    Safari/iOS Specific Fixes
    ============================================ */
+/* Chat page needs fixed positioning for keyboard handling */
+.chat-page-container {
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+  height: 100dvh;
+  height: -webkit-fill-available;
+}
+
 @supports (-webkit-touch-callout: none) {
-  /* iOS Safari specific */
-  body {
-    /* Fix for iOS bounce scrolling */
-    position: fixed;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-  }
-  
-  /* Fix for iOS keyboard pushing content */
-  #root {
-    height: 100%;
-    position: fixed;
-    overflow: hidden;
-    width: 100%;
-  }
-  
   /* Improve touch scrolling in scrollable areas */
   .overflow-y-auto {
     -webkit-overflow-scrolling: touch;

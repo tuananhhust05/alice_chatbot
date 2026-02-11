@@ -5,8 +5,6 @@ type Theme = 'dark' | 'light';
 interface ThemeContextType {
   theme: Theme;
   systemTheme: Theme;
-  setTheme: (theme: Theme | 'system') => void;
-  isSystemTheme: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -17,20 +15,13 @@ const getSystemTheme = (): Theme => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
-// Get stored theme preference
-const getStoredTheme = (): Theme | 'system' => {
-  if (typeof window === 'undefined') return 'system';
-  return (localStorage.getItem('theme') as Theme | 'system') || 'system';
-};
-
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [systemTheme, setSystemTheme] = useState<Theme>(getSystemTheme);
-  const [themePreference, setThemePreference] = useState<Theme | 'system'>(getStoredTheme);
   
-  // Actual theme being used
-  const theme: Theme = themePreference === 'system' ? systemTheme : themePreference;
+  // Always use dark theme for this app (space theme)
+  const theme: Theme = 'dark';
 
-  // Listen for system theme changes
+  // Listen for system theme changes (for future use)
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
@@ -55,37 +46,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
   }, []);
 
-  // Apply theme to document
+  // Apply dark class to document (for consistency)
   useEffect(() => {
     const root = document.documentElement;
-    
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    }
-    
-    // Update meta theme-color for mobile browsers
-    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff');
-    }
-  }, [theme]);
-
-  const setTheme = (newTheme: Theme | 'system') => {
-    setThemePreference(newTheme);
-    localStorage.setItem('theme', newTheme);
-  };
+    root.classList.add('dark');
+    root.classList.remove('light');
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ 
-      theme, 
-      systemTheme, 
-      setTheme, 
-      isSystemTheme: themePreference === 'system' 
-    }}>
+    <ThemeContext.Provider value={{ theme, systemTheme }}>
       {children}
     </ThemeContext.Provider>
   );

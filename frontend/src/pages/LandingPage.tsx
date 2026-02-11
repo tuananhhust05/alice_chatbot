@@ -22,7 +22,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black overflow-x-hidden">
+    <div className="min-h-screen bg-black overflow-y-auto overflow-x-hidden">
       {/* 3D Space Background */}
       <SpaceBackground />
       

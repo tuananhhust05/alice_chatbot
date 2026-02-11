@@ -306,7 +306,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const canSend = (input.trim() || attachedFile) && !isLoading && !isStreaming && !isExtractingFile;
 
   return (
-    <div className="flex-1 flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden relative z-10">
+    <div className="flex-1 flex flex-col h-full max-h-full overflow-hidden relative z-10">
       {/* Messages area - takes remaining space */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {!hasMessages ? (
