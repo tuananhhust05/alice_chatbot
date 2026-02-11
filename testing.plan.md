@@ -151,3 +151,41 @@ Intentionally break everything to test resilience.
 - Appropriate retry logic
 - Fallback responses
 - Clear user notifications
+
+---
+
+## 10. Manual Browser Simulation Tests
+
+Simulate real user interactions through browser automation.
+
+### Test Areas
+- **End-to-end user flows**: Login → chat → logout
+- **Cross-browser compatibility**: Chrome, Firefox, Safari, Edge
+- **Responsive design**: Desktop, tablet, mobile viewports
+- **Accessibility**: Screen reader compatibility, keyboard navigation
+
+### Tools
+- Playwright / Puppeteer for browser automation
+- Manual exploratory testing for edge cases
+
+---
+
+## 11. Stress Tests
+
+Test system behavior under extreme load conditions.
+
+### Test Scenarios
+- **Peak load**: Maximum concurrent users
+- **Sustained load**: High traffic over extended period
+- **Spike load**: Sudden traffic bursts
+- **Soak test**: Memory leaks over long-running sessions
+
+### Metrics to Monitor
+- Response time (p50, p95, p99)
+- Error rate under load
+- Resource utilization (CPU, memory, connections)
+- Recovery time after overload
+
+### Tools
+- k6 / Locust for load generation
+- Grafana / Prometheus for monitoring

@@ -10,10 +10,10 @@
 - Check upload rag doc ( có upload thẳng lên không , upload xong phải sửa ở frontend ) ( done)
 - Deploy + retest 
 - Define functions for each module ( especial dataflow ( handle and save analystic data ) ) ( done )
-- Achitecture chart ( done )
+- Achitecture chart ( done ) ( chưa cho Ilank biêt )
 - Scale Plan ( done )
-- Error handling plan (retry)
-- Testing Plan ( just create a plan )
+- Error handling plan (retry) ( done )
+- Testing Plan ( just create a plan ) ( done )
   + Manual test by simulating browser 
   + Stress test 
 - Quay video test hỏi mấy câu về code trông trả lời cho ngầu + trình bày cả phần responsive ( do before deploy )
