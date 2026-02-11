@@ -120,7 +120,7 @@ const ChatPage: React.FC = () => {
   }, [fetchConversations]);
 
   return (
-    <div className="h-screen h-[100dvh] w-screen flex bg-black overflow-hidden relative">
+    <div className="h-[100dvh] w-screen flex bg-black overflow-hidden relative">
       {/* 3D Space Background */}
       <SpaceBackground />
       

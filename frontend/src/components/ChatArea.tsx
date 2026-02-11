@@ -68,8 +68,46 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const [isExtractingFile, setIsExtractingFile] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [error, setError] = useState('');
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle mobile keyboard visibility
+  useEffect(() => {
+    const handleResize = () => {
+      // On mobile, when keyboard opens, visualViewport height decreases
+      if (window.visualViewport) {
+        const isKeyboard = window.visualViewport.height < window.innerHeight * 0.75;
+        setIsKeyboardOpen(isKeyboard);
+      }
+    };
+
+    // Scroll input into view when focused on mobile
+    const handleFocus = () => {
+      setTimeout(() => {
+        inputContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 300);
+    };
+
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.addEventListener('focus', handleFocus);
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      if (textarea) {
+        textarea.removeEventListener('focus', handleFocus);
+      }
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
 
   // Sync local messages with conversation — only when switching to a different conversation
   useEffect(() => {
@@ -268,12 +306,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const canSend = (input.trim() || attachedFile) && !isLoading && !isStreaming && !isExtractingFile;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden relative z-10">
+      {/* Messages area - takes remaining space */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {!hasMessages ? (
           /* Empty state */
-          <div className="h-full flex flex-col items-center justify-center px-4 pt-14 lg:pt-4">
+          <div className="h-full flex flex-col items-center justify-center px-4 pt-14 lg:pt-4 pb-4">
             <div className="text-center mb-6 sm:mb-8 animate-fade-in">
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-[#0A84FF] via-[#5E5CE6] to-[#BF5AF2] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/30 star-pulse">
                 <HiSparkles className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
@@ -320,8 +358,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         )}
       </div>
 
-      {/* Input area */}
-      <div className="bg-transparent pb-3 pt-2 safe-area-bottom relative z-20">
+      {/* Input area - fixed at bottom, always visible */}
+      <div 
+        ref={inputContainerRef}
+        className="flex-shrink-0 bg-black/80 backdrop-blur-xl pb-2 pt-2 safe-area-bottom relative z-20 border-t border-white/5"
+      >
         <div className="max-w-3xl mx-auto w-full px-3 sm:px-4">
           {/* Unified input container - Space themed */}
           <div className="relative rounded-2xl sm:rounded-3xl space-glass border border-white/15 focus-within:border-purple-500/50 transition-all duration-300 focus-within:shadow-[0_0_30px_rgba(94,92,230,0.3)]">
