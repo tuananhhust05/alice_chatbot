@@ -3,8 +3,8 @@ services:
     image: mongo:7
     container_name: alice_mongodb
     restart: unless-stopped
-    ports:
-      - "27017:27017"
+    # ports:
+    #   - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-alice}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-alice_secret}
@@ -18,9 +18,9 @@ services:
     image: cr.weaviate.io/semitechnologies/weaviate:1.28.2
     container_name: alice_weaviate
     restart: unless-stopped
-    ports:
-      - "8080:8080"
-      - "50051:50051"
+    # ports:
+    #   - "8080:8080"
+    #   - "50051:50051"
     environment:
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
@@ -36,8 +36,8 @@ services:
     image: redis:7-alpine
     container_name: alice_redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -48,8 +48,8 @@ services:
     image: apache/kafka:latest
     container_name: alice_kafka
     restart: unless-stopped
-    ports:
-      - "9092:9092"
+    # ports:
+    #   - "9092:9092"
     environment:
       KAFKA_NODE_ID: 0
       KAFKA_PROCESS_ROLES: controller,broker
@@ -71,8 +71,8 @@ services:
     image: apache/kafka:latest
     container_name: alice_kafkaflow
     restart: unless-stopped
-    ports:
-      - "9094:9094"
+    # ports:
+    #   - "9094:9094"
     environment:
       KAFKA_NODE_ID: 0
       KAFKA_PROCESS_ROLES: controller,broker
@@ -95,8 +95,8 @@ services:
       dockerfile: Dockerfile
     container_name: alice_orchestrator
     restart: unless-stopped
-    ports:
-      - "8001:8001"
+    # ports:
+    #   - "8001:8001"
     env_file:
       - ./orchestrator/.env
     environment:
@@ -119,8 +119,8 @@ services:
       dockerfile: Dockerfile
     container_name: alice_dataflow
     restart: unless-stopped
-    ports:
-      - "8002:8002"
+    # ports:
+    #   - "8002:8002"
     env_file:
       - ./dataflow/.env
     environment:
@@ -140,7 +140,7 @@ services:
     container_name: alice_backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8009:8000"
     env_file:
       - ./backend/.env
     environment:
@@ -162,7 +162,7 @@ services:
     container_name: alice_frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     env_file:
       - ./frontend/.env
     depends_on:
