@@ -4,6 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -21,6 +22,17 @@ export default {
           green: '#30D158',
           red: '#FF453A',
           orange: '#FF9F0A',
+          // Light theme variants
+          light: {
+            bg: '#F5F5F7',
+            surface: '#FFFFFF',
+            elevated: '#F5F5F7',
+            hover: '#E5E5E7',
+            border: '#D2D2D7',
+            text: '#1D1D1F',
+            secondary: '#6E6E73',
+            tertiary: '#86868B',
+          }
         },
       },
       fontFamily: {

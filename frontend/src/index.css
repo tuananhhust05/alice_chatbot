@@ -7,12 +7,16 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    /* Safari tap highlight fix */
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {
     /* Support for dynamic viewport height on mobile */
     height: 100%;
     height: -webkit-fill-available;
+    /* Safari smooth scrolling */
+    -webkit-overflow-scrolling: touch;
   }
 
   body {
@@ -20,22 +24,42 @@
       'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Dark theme by default */
     background: #000000;
     color: #ffffff;
     height: 100%;
     height: 100dvh;
+    /* Fallback for browsers without dvh support */
+    height: -webkit-fill-available;
     /* Prevent pull-to-refresh on mobile */
     overscroll-behavior: none;
     /* Prevent body scroll when keyboard is open */
     overflow: hidden;
     position: fixed;
     width: 100%;
+    /* Safari text rendering */
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Light theme support */
+  html.light body {
+    background: #f5f5f7;
+    color: #1d1d1f;
   }
 
   #root {
     height: 100%;
     height: 100dvh;
+    height: -webkit-fill-available;
     overflow: hidden;
+  }
+
+  /* iOS Safari notch support */
+  @supports (padding: max(0px)) {
+    body {
+      padding-left: max(0px, env(safe-area-inset-left));
+      padding-right: max(0px, env(safe-area-inset-right));
+    }
   }
 
   /* Custom scrollbar - Apple style */
@@ -387,4 +411,202 @@ html {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ============================================
+   CSS Fallback Stars for Safari/iOS
+   ============================================ */
+.stars-layer-1,
+.stars-layer-2,
+.stars-layer-3 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+
+.stars-layer-1 {
+  background-image: 
+    radial-gradient(1px 1px at 20px 30px, white, transparent),
+    radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 50px 160px, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 90px 40px, white, transparent),
+    radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 160px 120px, white, transparent),
+    radial-gradient(1.5px 1.5px at 200px 50px, rgba(94, 92, 230, 0.9), transparent),
+    radial-gradient(1px 1px at 240px 130px, white, transparent);
+  background-repeat: repeat;
+  background-size: 250px 250px;
+  animation: twinkle 8s ease-in-out infinite;
+}
+
+.stars-layer-2 {
+  background-image: 
+    radial-gradient(1px 1px at 25px 45px, rgba(10, 132, 255, 0.8), transparent),
+    radial-gradient(1.5px 1.5px at 75px 95px, white, transparent),
+    radial-gradient(1px 1px at 125px 25px, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 175px 145px, rgba(94, 92, 230, 0.8), transparent),
+    radial-gradient(1px 1px at 225px 75px, white, transparent);
+  background-repeat: repeat;
+  background-size: 300px 200px;
+  animation: twinkle 12s ease-in-out infinite reverse;
+}
+
+.stars-layer-3 {
+  background-image: 
+    radial-gradient(2px 2px at 60px 100px, rgba(191, 90, 242, 0.7), transparent),
+    radial-gradient(1px 1px at 110px 60px, white, transparent),
+    radial-gradient(1.5px 1.5px at 180px 180px, rgba(10, 132, 255, 0.9), transparent);
+  background-repeat: repeat;
+  background-size: 350px 250px;
+  animation: drift 25s linear infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes drift {
+  0% { transform: translateX(0) translateY(0); }
+  100% { transform: translateX(-100px) translateY(-50px); }
+}
+
+/* Floating animations for CSS fallback orbs */
+.animate-float-slow {
+  animation: floatSlow 8s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: floatMedium 6s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: floatFast 4s ease-in-out infinite;
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(10px, -15px); }
+  50% { transform: translate(-5px, -25px); }
+  75% { transform: translate(-15px, -10px); }
+}
+
+@keyframes floatMedium {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(-15px, -20px); }
+  66% { transform: translate(10px, -15px); }
+}
+
+@keyframes floatFast {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(15px, -20px); }
+}
+
+/* ============================================
+   Light Theme Overrides
+   ============================================ */
+html.light .space-glass {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(245, 245, 247, 0.95) 50%,
+    rgba(255, 255, 255, 0.9) 100%
+  );
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
+    0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+html.light .glass-effect {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+html.light .glass-border {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Light theme text colors */
+html.light .text-white {
+  color: #1d1d1f;
+}
+
+html.light .text-apple-secondary {
+  color: #6e6e73;
+}
+
+html.light .text-apple-tertiary {
+  color: #86868b;
+}
+
+/* Light theme backgrounds */
+html.light .bg-black {
+  background-color: #f5f5f7;
+}
+
+html.light .bg-apple-surface {
+  background-color: #ffffff;
+}
+
+html.light .bg-apple-elevated {
+  background-color: #f5f5f7;
+}
+
+/* Light theme borders */
+html.light .border-white\/10,
+html.light .border-white\/15 {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   Safari/iOS Specific Fixes
+   ============================================ */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific */
+  body {
+    /* Fix for iOS bounce scrolling */
+    position: fixed;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* Fix for iOS keyboard pushing content */
+  #root {
+    height: 100%;
+    position: fixed;
+    overflow: hidden;
+    width: 100%;
+  }
+  
+  /* Improve touch scrolling in scrollable areas */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Fix backdrop-filter on iOS */
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl {
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+/* Fix for Safari mask-composite */
+@supports (-webkit-mask-composite: xor) {
+  .cosmic-glow::before,
+  .feature-card-glow::before {
+    -webkit-mask-composite: xor;
+  }
+}
+
+@supports not (-webkit-mask-composite: xor) {
+  .cosmic-glow::before,
+  .feature-card-glow::before {
+    /* Fallback for older browsers */
+    display: none;
+  }
 }

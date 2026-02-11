@@ -12,12 +12,17 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
-    allowedHosts: ['alicechatbot.com', 'localhost', '127.0.0.1'],
+    allowedHosts: ['alicechatbot.com', 'www.alicechatbot.com', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
         target: 'http://backend:8000',
         changeOrigin: true,
       },
     },
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+    allowedHosts: ['alicechatbot.com', 'www.alicechatbot.com', 'localhost', '127.0.0.1'],
   },
 })

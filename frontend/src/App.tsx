@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import ChatPage from './pages/ChatPage';
@@ -61,18 +62,22 @@ const LoadingScreen: React.FC = () => (
 const App: React.FC = () => {
   if (isAdminRoute()) {
     return (
-      <AdminAuthProvider>
-        <AdminApp />
-      </AdminAuthProvider>
+      <ThemeProvider>
+        <AdminAuthProvider>
+          <AdminApp />
+        </AdminAuthProvider>
+      </ThemeProvider>
     );
   }
 
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <AuthProvider>
-        <UserApp />
-      </AuthProvider>
-    </GoogleOAuthProvider>
+    <ThemeProvider>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <AuthProvider>
+          <UserApp />
+        </AuthProvider>
+      </GoogleOAuthProvider>
+    </ThemeProvider>
   );
 };
 
