@@ -751,6 +751,44 @@
                 tooltip: 'Kafka message queue for async communication between Orchestrator and Backend services.',
                 icon: 'bi-broadcast'
             },
+            // Kafka Retry Queue
+            {
+                id: 'kafka_retry',
+                type: 'queue',
+                title: 'Kafka Retry',
+                subtitle: 'Retry Queue',
+                x: 200,
+                y: 900,
+                content: `
+                    <ul>
+                        <li>Failed Task Retry</li>
+                        <li>Exponential Backoff</li>
+                        <li>Jitter Support</li>
+                        <li>Max Retry: 5</li>
+                    </ul>
+                `,
+                tooltip: 'Kafka Retry Queue for failed tasks with exponential backoff and jitter. Tasks exceeding max retry are moved to DLQ.',
+                icon: 'bi-arrow-repeat'
+            },
+            // Dead Letter Queue (MongoDB)
+            {
+                id: 'dlq_mongodb',
+                type: 'database',
+                title: 'Dead Letter Queue',
+                subtitle: 'MongoDB Collection',
+                x: 200,
+                y: 1100,
+                content: `
+                    <ul>
+                        <li>Failed Tasks Storage</li>
+                        <li>Error Analysis</li>
+                        <li>Manual Retry</li>
+                        <li>Audit Trail</li>
+                    </ul>
+                `,
+                tooltip: 'Dead Letter Queue in MongoDB stores permanently failed tasks for analysis, manual retry, and audit purposes.',
+                icon: 'bi-exclamation-triangle-fill'
+            },
             // Layer 5: Databases (Bottom)
             {
                 id: 'mongodb',

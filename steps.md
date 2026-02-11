@@ -11,7 +11,8 @@
 - Deploy + retest 
 - Define functions for each module ( especial dataflow ( handle and save analystic data ) ) ( done )
 - Achitecture chart ( done )
-- Scale Plan
+- Scale Plan ( done )
+- Error handling plan (retry)
 - Testing Plan ( just create a plan )
   + Manual test by simulating browser 
   + Stress test 

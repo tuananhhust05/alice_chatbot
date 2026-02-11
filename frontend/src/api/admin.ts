@@ -192,3 +192,108 @@ export const unblacklistIP = async (ip: string): Promise<{ message: string; ip: 
   const { data } = await api.delete(`/api/admin/ip/blacklist/${encodeURIComponent(ip)}`);
   return data;
 };
+
+// ===== Dead Letter Queue =====
+export interface DLQTask {
+  id: string;
+  job_id: string;
+  task_type: string;
+  status: string;
+  retry_count: number;
+  max_retry: number;
+  error_message: string;
+  error_type: string;
+  original_payload: Record<string, unknown>;
+  failed_at: string;
+  created_at: string;
+  last_retry_at: string;
+}
+
+export interface DLQTaskDetail extends DLQTask {
+  error_stack_trace: string;
+  retry_history: Array<{
+    attempt: number;
+    requested_at: string;
+    requested_by: string;
+    type: string;
+  }>;
+  metadata: Record<string, unknown>;
+}
+
+export interface DLQListResponse {
+  tasks: DLQTask[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+export interface DLQSummaryResponse {
+  total: number;
+  pending_retry: number;
+  recent_failures_24h: number;
+  by_status: Record<string, number>;
+  by_task_type: Record<string, number>;
+  by_error_type: Record<string, number>;
+}
+
+export interface DLQActionResponse {
+  message: string;
+  retried?: string[];
+  deleted?: string[];
+  failed?: Array<{ id: string; reason: string }>;
+}
+
+export const getDLQTasks = async (
+  status?: string,
+  taskType?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  skip = 0,
+  limit = 50
+): Promise<DLQListResponse> => {
+  const { data } = await api.get('/api/admin/dlq', {
+    params: { status, task_type: taskType, date_from: dateFrom, date_to: dateTo, skip, limit },
+  });
+  return data;
+};
+
+export const getDLQSummary = async (): Promise<DLQSummaryResponse> => {
+  const { data } = await api.get('/api/admin/dlq/summary');
+  return data;
+};
+
+export const getDLQTaskDetail = async (taskId: string): Promise<DLQTaskDetail> => {
+  const { data } = await api.get(`/api/admin/dlq/${taskId}`);
+  return data;
+};
+
+export const retryDLQTasks = async (taskIds: string[]): Promise<DLQActionResponse> => {
+  const { data } = await api.post('/api/admin/dlq/retry', { task_ids: taskIds });
+  return data;
+};
+
+export const deleteDLQTasks = async (taskIds: string[]): Promise<DLQActionResponse> => {
+  const { data } = await api.post('/api/admin/dlq/delete', { task_ids: taskIds });
+  return data;
+};
+
+export const clearDLQ = async (
+  status?: string,
+  olderThanDays?: number
+): Promise<{ message: string; deleted_count: number }> => {
+  const { data } = await api.delete('/api/admin/dlq/clear', {
+    params: { status, older_than_days: olderThanDays },
+  });
+  return data;
+};
+
+export const exportDLQTasks = async (
+  status?: string,
+  taskType?: string,
+  limit = 1000
+): Promise<{ exported_at: string; total_exported: number; tasks: DLQTask[] }> => {
+  const { data } = await api.get('/api/admin/dlq/export', {
+    params: { status, task_type: taskType, limit },
+  });
+  return data;
+};

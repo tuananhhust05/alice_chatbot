@@ -596,3 +596,350 @@ async def get_ip_summary():
         "total_messages_today": total_messages_today,
         "unique_ips_today": unique_ips_today,
     }
+
+
+# ===== Dead Letter Queue Management =====
+
+class DLQRetryRequest(BaseModel):
+    task_ids: List[str]
+
+
+class DLQDeleteRequest(BaseModel):
+    task_ids: List[str]
+
+
+@router.get("/dlq", dependencies=[Depends(require_admin)])
+async def get_dlq_tasks(
+    status: Optional[str] = None,
+    task_type: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+):
+    """Get Dead Letter Queue tasks with filtering options."""
+    db = get_db()
+    
+    query = {}
+    
+    if status:
+        query["status"] = status
+    
+    if task_type:
+        query["task_type"] = task_type
+    
+    if date_from or date_to:
+        query["failed_at"] = {}
+        if date_from:
+            query["failed_at"]["$gte"] = datetime.fromisoformat(date_from)
+        if date_to:
+            query["failed_at"]["$lte"] = datetime.fromisoformat(date_to + "T23:59:59")
+    
+    cursor = db.dead_letter_queue.find(query).sort("failed_at", -1).skip(skip).limit(limit)
+    
+    tasks = []
+    async for task in cursor:
+        tasks.append({
+            "id": str(task["_id"]),
+            "job_id": task.get("job_id", ""),
+            "task_type": task.get("task_type", "unknown"),
+            "status": task.get("status", "failed"),
+            "retry_count": task.get("retry_count", 0),
+            "max_retry": task.get("max_retry", 5),
+            "error_message": task.get("error_message", ""),
+            "error_type": task.get("error_type", ""),
+            "original_payload": task.get("original_payload", {}),
+            "failed_at": task.get("failed_at", ""),
+            "created_at": task.get("created_at", ""),
+            "last_retry_at": task.get("last_retry_at", ""),
+        })
+    
+    total = await db.dead_letter_queue.count_documents(query)
+    
+    return {
+        "tasks": tasks,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+    }
+
+
+@router.get("/dlq/summary", dependencies=[Depends(require_admin)])
+async def get_dlq_summary():
+    """Get Dead Letter Queue summary statistics."""
+    db = get_db()
+    
+    # Get counts by status
+    status_pipeline = [
+        {"$group": {
+            "_id": "$status",
+            "count": {"$sum": 1},
+        }},
+    ]
+    
+    status_counts = {}
+    async for doc in db.dead_letter_queue.aggregate(status_pipeline):
+        status_counts[doc["_id"] or "unknown"] = doc["count"]
+    
+    # Get counts by task type
+    type_pipeline = [
+        {"$group": {
+            "_id": "$task_type",
+            "count": {"$sum": 1},
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": 10},
+    ]
+    
+    type_counts = {}
+    async for doc in db.dead_letter_queue.aggregate(type_pipeline):
+        type_counts[doc["_id"] or "unknown"] = doc["count"]
+    
+    # Get counts by error type
+    error_pipeline = [
+        {"$group": {
+            "_id": "$error_type",
+            "count": {"$sum": 1},
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": 10},
+    ]
+    
+    error_counts = {}
+    async for doc in db.dead_letter_queue.aggregate(error_pipeline):
+        error_counts[doc["_id"] or "unknown"] = doc["count"]
+    
+    # Get recent failures (last 24 hours)
+    yesterday = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    recent_failures = await db.dead_letter_queue.count_documents({"failed_at": {"$gte": yesterday}})
+    
+    # Total count
+    total = await db.dead_letter_queue.count_documents({})
+    
+    # Pending retry count
+    pending_retry = await db.dead_letter_queue.count_documents({"status": "pending_retry"})
+    
+    return {
+        "total": total,
+        "pending_retry": pending_retry,
+        "recent_failures_24h": recent_failures,
+        "by_status": status_counts,
+        "by_task_type": type_counts,
+        "by_error_type": error_counts,
+    }
+
+
+@router.get("/dlq/{task_id}", dependencies=[Depends(require_admin)])
+async def get_dlq_task_detail(task_id: str):
+    """Get detailed information about a specific DLQ task."""
+    db = get_db()
+    
+    try:
+        task = await db.dead_letter_queue.find_one({"_id": ObjectId(task_id)})
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid task ID format")
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {
+        "id": str(task["_id"]),
+        "job_id": task.get("job_id", ""),
+        "task_type": task.get("task_type", "unknown"),
+        "status": task.get("status", "failed"),
+        "retry_count": task.get("retry_count", 0),
+        "max_retry": task.get("max_retry", 5),
+        "error_message": task.get("error_message", ""),
+        "error_type": task.get("error_type", ""),
+        "error_stack_trace": task.get("error_stack_trace", ""),
+        "original_payload": task.get("original_payload", {}),
+        "retry_history": task.get("retry_history", []),
+        "failed_at": task.get("failed_at", ""),
+        "created_at": task.get("created_at", ""),
+        "last_retry_at": task.get("last_retry_at", ""),
+        "metadata": task.get("metadata", {}),
+    }
+
+
+@router.post("/dlq/retry", dependencies=[Depends(require_admin)])
+async def retry_dlq_tasks(request: DLQRetryRequest, raw_request: Request):
+    """Manually retry selected DLQ tasks."""
+    db = get_db()
+    client_ip = get_client_ip(raw_request)
+    
+    retried = []
+    failed = []
+    
+    for task_id in request.task_ids:
+        try:
+            task = await db.dead_letter_queue.find_one({"_id": ObjectId(task_id)})
+            if not task:
+                failed.append({"id": task_id, "reason": "Task not found"})
+                continue
+            
+            # Update task status to pending_retry
+            await db.dead_letter_queue.update_one(
+                {"_id": ObjectId(task_id)},
+                {
+                    "$set": {
+                        "status": "pending_retry",
+                        "retry_requested_at": datetime.utcnow(),
+                        "retry_requested_by": "admin",
+                    },
+                    "$push": {
+                        "retry_history": {
+                            "attempt": task.get("retry_count", 0) + 1,
+                            "requested_at": datetime.utcnow(),
+                            "requested_by": "admin",
+                            "type": "manual_retry",
+                        }
+                    }
+                }
+            )
+            
+            # TODO: Push task back to Kafka retry queue
+            # This would integrate with your Kafka producer
+            # await kafka_producer.send("retry_queue", task.get("original_payload"))
+            
+            retried.append(task_id)
+            
+        except Exception as e:
+            failed.append({"id": task_id, "reason": str(e)})
+    
+    log_security_event(
+        event_type="dlq_manual_retry",
+        client_ip=client_ip,
+        user_id="admin",
+        details={"retried_count": len(retried), "failed_count": len(failed)},
+        severity="info"
+    )
+    
+    return {
+        "message": f"Retry requested for {len(retried)} tasks",
+        "retried": retried,
+        "failed": failed,
+    }
+
+
+@router.post("/dlq/delete", dependencies=[Depends(require_admin)])
+async def delete_dlq_tasks(request: DLQDeleteRequest, raw_request: Request):
+    """Delete selected DLQ tasks (permanent)."""
+    db = get_db()
+    client_ip = get_client_ip(raw_request)
+    
+    deleted = []
+    failed = []
+    
+    for task_id in request.task_ids:
+        try:
+            result = await db.dead_letter_queue.delete_one({"_id": ObjectId(task_id)})
+            if result.deleted_count > 0:
+                deleted.append(task_id)
+            else:
+                failed.append({"id": task_id, "reason": "Task not found"})
+        except Exception as e:
+            failed.append({"id": task_id, "reason": str(e)})
+    
+    log_security_event(
+        event_type="dlq_tasks_deleted",
+        client_ip=client_ip,
+        user_id="admin",
+        details={"deleted_count": len(deleted), "failed_count": len(failed)},
+        severity="warning"
+    )
+    
+    return {
+        "message": f"Deleted {len(deleted)} tasks",
+        "deleted": deleted,
+        "failed": failed,
+    }
+
+
+@router.delete("/dlq/clear", dependencies=[Depends(require_admin)])
+async def clear_dlq(
+    raw_request: Request,
+    status: Optional[str] = None,
+    older_than_days: Optional[int] = None,
+):
+    """Clear DLQ tasks based on filters. Use with caution!"""
+    db = get_db()
+    client_ip = get_client_ip(raw_request)
+    
+    query = {}
+    
+    if status:
+        query["status"] = status
+    
+    if older_than_days:
+        cutoff_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        from datetime import timedelta
+        cutoff_date = cutoff_date - timedelta(days=older_than_days)
+        query["failed_at"] = {"$lt": cutoff_date}
+    
+    # Get count before deletion
+    count = await db.dead_letter_queue.count_documents(query)
+    
+    if count == 0:
+        return {"message": "No tasks match the criteria", "deleted_count": 0}
+    
+    # Archive before deletion (optional - store in archive collection)
+    if count > 0:
+        tasks_to_archive = await db.dead_letter_queue.find(query).to_list(length=None)
+        if tasks_to_archive:
+            for task in tasks_to_archive:
+                task["archived_at"] = datetime.utcnow()
+                task["archived_by"] = "admin"
+            await db.dead_letter_queue_archive.insert_many(tasks_to_archive)
+    
+    # Delete tasks
+    result = await db.dead_letter_queue.delete_many(query)
+    
+    log_security_event(
+        event_type="dlq_cleared",
+        client_ip=client_ip,
+        user_id="admin",
+        details={
+            "deleted_count": result.deleted_count,
+            "filter_status": status,
+            "filter_older_than_days": older_than_days,
+        },
+        severity="warning"
+    )
+    
+    return {
+        "message": f"Cleared {result.deleted_count} tasks (archived before deletion)",
+        "deleted_count": result.deleted_count,
+    }
+
+
+@router.get("/dlq/export", dependencies=[Depends(require_admin)])
+async def export_dlq_tasks(
+    status: Optional[str] = None,
+    task_type: Optional[str] = None,
+    limit: int = 1000,
+):
+    """Export DLQ tasks to JSON format."""
+    db = get_db()
+    
+    query = {}
+    if status:
+        query["status"] = status
+    if task_type:
+        query["task_type"] = task_type
+    
+    cursor = db.dead_letter_queue.find(query).sort("failed_at", -1).limit(limit)
+    
+    tasks = []
+    async for task in cursor:
+        task["_id"] = str(task["_id"])
+        # Convert datetime objects to strings
+        for key, value in task.items():
+            if isinstance(value, datetime):
+                task[key] = value.isoformat()
+        tasks.append(task)
+    
+    return {
+        "exported_at": datetime.utcnow().isoformat(),
+        "total_exported": len(tasks),
+        "tasks": tasks,
+    }

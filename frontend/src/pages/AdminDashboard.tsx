@@ -8,15 +8,18 @@ import {
   getRagData, uploadRagData, deleteRagData,
   getIPSummary, getIPMessages, getIPBlacklist, blacklistIP, unblacklistIP,
   IPSummaryResponse, IPMessagesResponse,
+  getDLQTasks, getDLQSummary, getDLQTaskDetail, retryDLQTasks, deleteDLQTasks, clearDLQ, exportDLQTasks,
+  DLQTask, DLQTaskDetail, DLQSummaryResponse,
 } from '../api/admin';
 import {
   HiArrowRightOnRectangle, HiChartBar, HiUsers, HiChatBubbleLeftRight,
   HiCog6Tooth, HiDocumentText, HiArrowPath, HiTrash, HiArrowUpTray,
   HiClipboardDocument, HiSparkles, HiBars3, HiXMark, HiShieldCheck,
-  HiNoSymbol, HiMagnifyingGlass, HiPlus, HiGlobeAlt,
+  HiNoSymbol, HiMagnifyingGlass, HiPlus, HiGlobeAlt, HiExclamationTriangle,
+  HiArrowDownTray, HiEye, HiCheck, HiXCircle,
 } from 'react-icons/hi2';
 
-type Tab = 'analytics' | 'users' | 'conversations' | 'prompts' | 'ragdata' | 'ipmanagement';
+type Tab = 'analytics' | 'users' | 'conversations' | 'prompts' | 'ragdata' | 'ipmanagement' | 'dlq';
 
 const AdminDashboard: React.FC = () => {
   const { logout } = useAdminAuth();
@@ -49,6 +52,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'prompts', label: 'Prompts', icon: HiCog6Tooth },
     { id: 'ragdata', label: 'RAG Data', icon: HiDocumentText },
     { id: 'ipmanagement', label: 'IP Management', icon: HiShieldCheck },
+    { id: 'dlq', label: 'Dead Letter Queue', icon: HiExclamationTriangle },
   ];
 
   return (
@@ -135,6 +139,7 @@ const AdminDashboard: React.FC = () => {
           {activeTab === 'prompts' && <PromptsTab />}
           {activeTab === 'ragdata' && <RagDataTab />}
           {activeTab === 'ipmanagement' && <IPManagementTab />}
+          {activeTab === 'dlq' && <DLQTab />}
         </div>
       </div>
     </div>
@@ -1296,6 +1301,543 @@ const IPManagementTab: React.FC = () => {
               {blacklist.length === 0 && (
                 <div className="p-8 text-center text-apple-tertiary">No IPs are currently blacklisted</div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ===== Dead Letter Queue Tab =====
+const DLQTab: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [summary, setSummary] = useState<DLQSummaryResponse | null>(null);
+  const [tasks, setTasks] = useState<DLQTask[]>([]);
+  const [total, setTotal] = useState(0);
+  const [skip, setSkip] = useState(0);
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [selectedTask, setSelectedTask] = useState<DLQTaskDetail | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // Filters
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterTaskType, setFilterTaskType] = useState<string>('');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
+  
+  // Clear modal
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearStatus, setClearStatus] = useState<string>('');
+  const [clearOlderThanDays, setClearOlderThanDays] = useState<string>('30');
+
+  const limit = 20;
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [summaryData, tasksData] = await Promise.all([
+        getDLQSummary(),
+        getDLQTasks(
+          filterStatus || undefined,
+          filterTaskType || undefined,
+          filterDateFrom || undefined,
+          filterDateTo || undefined,
+          skip,
+          limit
+        ),
+      ]);
+      setSummary(summaryData);
+      setTasks(tasksData.tasks);
+      setTotal(tasksData.total);
+    } catch (err) {
+      console.error('Failed to fetch DLQ data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filterStatus, filterTaskType, filterDateFrom, filterDateTo, skip]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleSelectAll = () => {
+    if (selectedTasks.size === tasks.length) {
+      setSelectedTasks(new Set());
+    } else {
+      setSelectedTasks(new Set(tasks.map(t => t.id)));
+    }
+  };
+
+  const handleSelectTask = (taskId: string) => {
+    const newSelected = new Set(selectedTasks);
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId);
+    } else {
+      newSelected.add(taskId);
+    }
+    setSelectedTasks(newSelected);
+  };
+
+  const handleViewDetail = async (taskId: string) => {
+    try {
+      const detail = await getDLQTaskDetail(taskId);
+      setSelectedTask(detail);
+      setShowDetailModal(true);
+    } catch (err) {
+      console.error('Failed to fetch task detail:', err);
+    }
+  };
+
+  const handleRetrySelected = async () => {
+    if (selectedTasks.size === 0) return;
+    setActionLoading(true);
+    try {
+      await retryDLQTasks(Array.from(selectedTasks));
+      setSelectedTasks(new Set());
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to retry tasks:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedTasks.size === 0) return;
+    if (!confirm(`Delete ${selectedTasks.size} task(s)? This cannot be undone.`)) return;
+    setActionLoading(true);
+    try {
+      await deleteDLQTasks(Array.from(selectedTasks));
+      setSelectedTasks(new Set());
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to delete tasks:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleClearDLQ = async () => {
+    setActionLoading(true);
+    try {
+      await clearDLQ(
+        clearStatus || undefined,
+        clearOlderThanDays ? parseInt(clearOlderThanDays) : undefined
+      );
+      setShowClearModal(false);
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to clear DLQ:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const data = await exportDLQTasks(filterStatus || undefined, filterTaskType || undefined);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dlq-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export DLQ:', err);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleString();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'failed': return 'text-red-400 bg-red-400/10';
+      case 'pending_retry': return 'text-yellow-400 bg-yellow-400/10';
+      case 'resolved': return 'text-green-400 bg-green-400/10';
+      default: return 'text-apple-tertiary bg-apple-elevated';
+    }
+  };
+
+  if (loading && !summary) return <LoadingState />;
+
+  return (
+    <div className="space-y-4 lg:space-y-6">
+      {/* Summary Cards */}
+      {summary && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          <div className="bg-apple-surface rounded-xl border border-apple-border p-3 lg:p-4">
+            <p className="text-apple-tertiary text-[10px] lg:text-xs mb-1">Total Tasks</p>
+            <p className="text-xl lg:text-2xl font-bold">{summary.total.toLocaleString()}</p>
+          </div>
+          <div className="bg-apple-surface rounded-xl border border-red-500/30 p-3 lg:p-4">
+            <p className="text-red-400 text-[10px] lg:text-xs mb-1">Failed (24h)</p>
+            <p className="text-xl lg:text-2xl font-bold text-red-400">{summary.recent_failures_24h.toLocaleString()}</p>
+          </div>
+          <div className="bg-apple-surface rounded-xl border border-yellow-500/30 p-3 lg:p-4">
+            <p className="text-yellow-400 text-[10px] lg:text-xs mb-1">Pending Retry</p>
+            <p className="text-xl lg:text-2xl font-bold text-yellow-400">{summary.pending_retry.toLocaleString()}</p>
+          </div>
+          <div className="bg-apple-surface rounded-xl border border-apple-border p-3 lg:p-4">
+            <p className="text-apple-tertiary text-[10px] lg:text-xs mb-1">Task Types</p>
+            <p className="text-xl lg:text-2xl font-bold">{Object.keys(summary.by_task_type).length}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Stats by Type */}
+      {summary && Object.keys(summary.by_error_type).length > 0 && (
+        <div className="bg-apple-surface rounded-xl border border-apple-border p-4">
+          <h3 className="text-sm font-medium mb-3">Errors by Type</h3>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(summary.by_error_type).map(([type, count]) => (
+              <span key={type} className="px-3 py-1.5 bg-red-400/10 text-red-400 rounded-lg text-xs">
+                {type}: {count}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filters & Actions */}
+      <div className="bg-apple-surface rounded-xl border border-apple-border p-4">
+        <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
+            <select
+              value={filterStatus}
+              onChange={(e) => { setFilterStatus(e.target.value); setSkip(0); }}
+              className="px-3 py-2 bg-apple-elevated border border-apple-border rounded-lg text-sm focus:outline-none focus:border-apple-accent"
+            >
+              <option value="">All Status</option>
+              <option value="failed">Failed</option>
+              <option value="pending_retry">Pending Retry</option>
+              <option value="resolved">Resolved</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Task Type"
+              value={filterTaskType}
+              onChange={(e) => { setFilterTaskType(e.target.value); setSkip(0); }}
+              className="px-3 py-2 bg-apple-elevated border border-apple-border rounded-lg text-sm focus:outline-none focus:border-apple-accent w-32"
+            />
+            <input
+              type="date"
+              value={filterDateFrom}
+              onChange={(e) => { setFilterDateFrom(e.target.value); setSkip(0); }}
+              className="px-3 py-2 bg-apple-elevated border border-apple-border rounded-lg text-sm focus:outline-none focus:border-apple-accent"
+            />
+            <input
+              type="date"
+              value={filterDateTo}
+              onChange={(e) => { setFilterDateTo(e.target.value); setSkip(0); }}
+              className="px-3 py-2 bg-apple-elevated border border-apple-border rounded-lg text-sm focus:outline-none focus:border-apple-accent"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={fetchData}
+              className="px-3 py-2 bg-apple-elevated border border-apple-border rounded-lg text-sm hover:bg-apple-surface transition-colors flex items-center gap-1"
+            >
+              <HiArrowPath className="w-4 h-4" /> Refresh
+            </button>
+            <button
+              onClick={handleExport}
+              className="px-3 py-2 bg-apple-elevated border border-apple-border rounded-lg text-sm hover:bg-apple-surface transition-colors flex items-center gap-1"
+            >
+              <HiArrowDownTray className="w-4 h-4" /> Export
+            </button>
+            <button
+              onClick={() => setShowClearModal(true)}
+              className="px-3 py-2 bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg text-sm hover:bg-red-500/20 transition-colors flex items-center gap-1"
+            >
+              <HiTrash className="w-4 h-4" /> Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Bulk Actions */}
+      {selectedTasks.size > 0 && (
+        <div className="bg-apple-accent/10 border border-apple-accent/30 rounded-xl p-4 flex items-center justify-between">
+          <span className="text-sm">{selectedTasks.size} task(s) selected</span>
+          <div className="flex gap-2">
+            <button
+              onClick={handleRetrySelected}
+              disabled={actionLoading}
+              className="px-4 py-2 bg-yellow-500 text-black rounded-lg text-sm font-medium hover:bg-yellow-400 transition-colors disabled:opacity-50 flex items-center gap-1"
+            >
+              <HiArrowPath className="w-4 h-4" /> Retry Selected
+            </button>
+            <button
+              onClick={handleDeleteSelected}
+              disabled={actionLoading}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-1"
+            >
+              <HiTrash className="w-4 h-4" /> Delete Selected
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tasks Table */}
+      <div className="bg-apple-surface rounded-xl border border-apple-border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-apple-elevated border-b border-apple-border">
+              <tr>
+                <th className="p-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedTasks.size === tasks.length && tasks.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded border-apple-border"
+                  />
+                </th>
+                <th className="p-3 text-left text-apple-secondary font-medium">Job ID</th>
+                <th className="p-3 text-left text-apple-secondary font-medium">Type</th>
+                <th className="p-3 text-left text-apple-secondary font-medium">Status</th>
+                <th className="p-3 text-left text-apple-secondary font-medium">Retries</th>
+                <th className="p-3 text-left text-apple-secondary font-medium">Error</th>
+                <th className="p-3 text-left text-apple-secondary font-medium">Failed At</th>
+                <th className="p-3 text-left text-apple-secondary font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-apple-border/50">
+              {tasks.map((task) => (
+                <tr key={task.id} className="hover:bg-apple-elevated/30">
+                  <td className="p-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedTasks.has(task.id)}
+                      onChange={() => handleSelectTask(task.id)}
+                      className="rounded border-apple-border"
+                    />
+                  </td>
+                  <td className="p-3 font-mono text-xs">{task.job_id.slice(0, 8)}...</td>
+                  <td className="p-3">
+                    <span className="px-2 py-1 bg-apple-elevated rounded text-xs">{task.task_type}</span>
+                  </td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded text-xs ${getStatusColor(task.status)}`}>
+                      {task.status}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className="text-apple-tertiary">{task.retry_count}/{task.max_retry}</span>
+                  </td>
+                  <td className="p-3 max-w-xs truncate text-red-400 text-xs">{task.error_message || '-'}</td>
+                  <td className="p-3 text-apple-tertiary text-xs">{formatDate(task.failed_at)}</td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => handleViewDetail(task.id)}
+                      className="p-1.5 hover:bg-apple-elevated rounded transition-colors"
+                      title="View Details"
+                    >
+                      <HiEye className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {tasks.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-apple-tertiary">
+                    <HiCheck className="w-12 h-12 mx-auto mb-2 text-green-400" />
+                    No failed tasks in the Dead Letter Queue
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {total > limit && (
+          <div className="p-3 border-t border-apple-border flex items-center justify-between">
+            <span className="text-sm text-apple-tertiary">
+              Showing {skip + 1}-{Math.min(skip + limit, total)} of {total}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSkip(Math.max(0, skip - limit))}
+                disabled={skip === 0}
+                className="px-3 py-1.5 bg-apple-elevated rounded text-sm disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setSkip(skip + limit)}
+                disabled={skip + limit >= total}
+                className="px-3 py-1.5 bg-apple-elevated rounded text-sm disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedTask && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-apple-surface rounded-2xl border border-apple-border max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b border-apple-border flex items-center justify-between">
+              <h3 className="font-semibold">Task Details</h3>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="p-2 hover:bg-apple-elevated rounded-lg transition-colors"
+              >
+                <HiXMark className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh] space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-apple-tertiary mb-1">Job ID</p>
+                  <p className="font-mono text-sm">{selectedTask.job_id}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-apple-tertiary mb-1">Task Type</p>
+                  <p className="text-sm">{selectedTask.task_type}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-apple-tertiary mb-1">Status</p>
+                  <span className={`px-2 py-1 rounded text-xs ${getStatusColor(selectedTask.status)}`}>
+                    {selectedTask.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-apple-tertiary mb-1">Retry Count</p>
+                  <p className="text-sm">{selectedTask.retry_count} / {selectedTask.max_retry}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-apple-tertiary mb-1">Failed At</p>
+                  <p className="text-sm">{formatDate(selectedTask.failed_at)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-apple-tertiary mb-1">Last Retry</p>
+                  <p className="text-sm">{formatDate(selectedTask.last_retry_at)}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs text-apple-tertiary mb-1">Error Type</p>
+                <p className="text-sm text-red-400">{selectedTask.error_type || '-'}</p>
+              </div>
+
+              <div>
+                <p className="text-xs text-apple-tertiary mb-1">Error Message</p>
+                <p className="text-sm text-red-400 bg-red-400/5 p-3 rounded-lg">{selectedTask.error_message || '-'}</p>
+              </div>
+
+              {selectedTask.error_stack_trace && (
+                <div>
+                  <p className="text-xs text-apple-tertiary mb-1">Stack Trace</p>
+                  <pre className="text-xs bg-apple-elevated p-3 rounded-lg overflow-x-auto whitespace-pre-wrap">
+                    {selectedTask.error_stack_trace}
+                  </pre>
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs text-apple-tertiary mb-1">Original Payload</p>
+                <pre className="text-xs bg-apple-elevated p-3 rounded-lg overflow-x-auto">
+                  {JSON.stringify(selectedTask.original_payload, null, 2)}
+                </pre>
+              </div>
+
+              {selectedTask.retry_history && selectedTask.retry_history.length > 0 && (
+                <div>
+                  <p className="text-xs text-apple-tertiary mb-1">Retry History</p>
+                  <div className="space-y-2">
+                    {selectedTask.retry_history.map((retry, idx) => (
+                      <div key={idx} className="text-xs bg-apple-elevated p-2 rounded flex justify-between">
+                        <span>Attempt {retry.attempt} - {retry.type}</span>
+                        <span className="text-apple-tertiary">{formatDate(retry.requested_at)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-apple-border flex justify-end gap-2">
+              <button
+                onClick={async () => {
+                  await retryDLQTasks([selectedTask.id]);
+                  setShowDetailModal(false);
+                  fetchData();
+                }}
+                className="px-4 py-2 bg-yellow-500 text-black rounded-lg text-sm font-medium hover:bg-yellow-400 transition-colors"
+              >
+                Retry Task
+              </button>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 bg-apple-elevated rounded-lg text-sm hover:bg-apple-border transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear Modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-apple-surface rounded-2xl border border-apple-border max-w-md w-full">
+            <div className="p-4 border-b border-apple-border">
+              <h3 className="font-semibold text-red-400 flex items-center gap-2">
+                <HiExclamationTriangle className="w-5 h-5" />
+                Clear Dead Letter Queue
+              </h3>
+            </div>
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-apple-secondary">
+                This will archive and delete tasks from the DLQ. Use filters to target specific tasks.
+              </p>
+              <div>
+                <label className="text-xs text-apple-tertiary mb-1 block">Filter by Status</label>
+                <select
+                  value={clearStatus}
+                  onChange={(e) => setClearStatus(e.target.value)}
+                  className="w-full px-3 py-2 bg-apple-elevated border border-apple-border rounded-lg text-sm focus:outline-none focus:border-apple-accent"
+                >
+                  <option value="">All Status</option>
+                  <option value="failed">Failed</option>
+                  <option value="pending_retry">Pending Retry</option>
+                  <option value="resolved">Resolved</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-apple-tertiary mb-1 block">Older than (days)</label>
+                <input
+                  type="number"
+                  value={clearOlderThanDays}
+                  onChange={(e) => setClearOlderThanDays(e.target.value)}
+                  className="w-full px-3 py-2 bg-apple-elevated border border-apple-border rounded-lg text-sm focus:outline-none focus:border-apple-accent"
+                  placeholder="Leave empty to clear all matching"
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t border-apple-border flex justify-end gap-2">
+              <button
+                onClick={() => setShowClearModal(false)}
+                className="px-4 py-2 bg-apple-elevated rounded-lg text-sm hover:bg-apple-border transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearDLQ}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {actionLoading ? 'Clearing...' : 'Clear Tasks'}
+              </button>
             </div>
           </div>
         </div>
