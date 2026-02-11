@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import ChatPage from './pages/ChatPage';
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -14,16 +15,24 @@ const isAdminRoute = () => window.location.pathname.startsWith('/admin');
 
 const UserApp: React.FC = () => {
   const { user, loading } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
 
   if (loading) {
     return <LoadingScreen />;
   }
 
-  if (!user) {
-    return <LoginPage />;
+  // If user is authenticated, show chat
+  if (user) {
+    return <ChatPage />;
   }
 
-  return <ChatPage />;
+  // If user clicked login, show login page
+  if (showLogin) {
+    return <LoginPage onBack={() => setShowLogin(false)} />;
+  }
+
+  // Otherwise show landing page
+  return <LandingPage onLoginClick={() => setShowLogin(true)} />;
 };
 
 const AdminApp: React.FC = () => {

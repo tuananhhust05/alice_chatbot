@@ -9,6 +9,8 @@
 - Rà soát 1 lượt lỗ hổng bảo mật , ratelimit ( done )
 - Check upload rag doc ( có upload thẳng lên không , upload xong phải sửa ở frontend ) ( done)
 - Deploy + retest 
+- Check 1 lượt .env 
+- Tính năng upload file có lưu lại file không 
 - Define functions for each module ( especial dataflow ( handle and save analystic data ) ) ( done )
 - Achitecture chart ( done ) ( chưa cho Ilank biêt )
 - Scale Plan ( done )
@@ -17,3 +19,5 @@
   + Manual test by simulating browser 
   + Stress test 
 - Quay video test hỏi mấy câu về code trông trả lời cho ngầu + trình bày cả phần responsive ( do before deploy )
+- Let PM know about sercurity 
+- Let PM know about streaming ( stream_response.md )

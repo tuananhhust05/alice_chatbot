@@ -2,8 +2,13 @@ import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import { HiSparkles } from 'react-icons/hi2';
+import { FiArrowLeft } from 'react-icons/fi';
 
-const LoginPage: React.FC = () => {
+interface LoginPageProps {
+  onBack?: () => void;
+}
+
+const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
   const { login } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,6 +31,17 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="h-screen h-[100dvh] w-screen flex items-center justify-center bg-black relative overflow-hidden safe-area-inset">
+      {/* Back button */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 flex items-center gap-2 px-3 py-2 rounded-full text-apple-secondary hover:text-apple-text hover:bg-apple-surface/50 transition-all duration-200"
+        >
+          <FiArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium hidden sm:inline">Back</span>
+        </button>
+      )}
+
       {/* Background gradient orbs */}
       <div className="absolute top-1/4 -left-32 w-64 sm:w-96 h-64 sm:h-96 bg-blue-600/20 rounded-full blur-[80px] sm:blur-[120px]" />
       <div className="absolute bottom-1/4 -right-32 w-64 sm:w-96 h-64 sm:h-96 bg-purple-600/20 rounded-full blur-[80px] sm:blur-[120px]" />
