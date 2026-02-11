@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise RAG Chat Bot - System Architecture</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            color: #1d1d1f;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            padding: 16px 32px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.3px;
+        }
+
+        .header .controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: #1d1d1f;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 1);
+            border-color: rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 65px);
+            overflow: auto;
+            background: 
+                linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+                linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .canvas {
+            position: relative;
+            min-width: 2400px;
+            min-height: 1800px;
+            padding: 120px;
+        }
+
+        .node {
+            position: absolute;
+            min-width: 240px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: move;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .node:hover {
+            border-color: rgba(0, 0, 0, 0.12);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .node.selected {
+            border-color: #007AFF;
+            box-shadow: 0 8px 24px rgba(0, 122, 255, 0.2), 0 2px 6px rgba(0, 122, 255, 0.1);
+        }
+
+        .node-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .node-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .node-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: #1d1d1f;
+            letter-spacing: -0.2px;
+        }
+
+        .node-subtitle {
+            font-size: 12px;
+            color: #86868b;
+            margin-top: 2px;
+            font-weight: 400;
+        }
+
+        .node-content {
+            font-size: 13px;
+            color: #515154;
+            line-height: 1.7;
+        }
+
+        .node-content ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .node-content li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .node-content li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #007AFF;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .node-ports {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: white;
+            border: 3px solid #007AFF;
+            border-radius: 50%;
+            cursor: crosshair;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+            pointer-events: auto;
+        }
+
+        .node-ports:hover {
+            box-shadow: 0 4px 8px rgba(0, 122, 255, 0.3);
+        }
+
+        .draw-mode .node-ports {
+            animation: pulse 2s infinite;
+        }
+
+        .draw-mode .node-ports.output {
+            background: #007AFF;
+            border-color: #0051D5;
+        }
+
+        .draw-mode .node-ports.input {
+            background: #10b981;
+            border-color: #059669;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: translateX(-50%) scale(1.3);
+                opacity: 0.8;
+            }
+        }
+
+        .node-ports.input {
+            top: -7px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .node-ports.output {
+            bottom: -7px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .node-ports.input:hover,
+        .node-ports.output:hover {
+            transform: translateX(-50%) scale(1.2);
+        }
+
+        /* Node Types */
+        .node-type-frontend .node-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .node-type-gateway .node-icon {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .node-type-orchestrator .node-icon {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .node-type-service .node-icon {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .node-type-database .node-icon {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .node-type-queue .node-icon {
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+        }
+
+        .node-type-analytics .node-icon {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        }
+
+        /* Connection Lines */
+        .connection-line {
+            stroke-width: 4;
+            fill: none;
+            marker-end: url(#arrowhead);
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+        }
+
+        .connection-line.event {
+            stroke: #ec4899;
+            stroke-dasharray: 6,4;
+        }
+
+        .connection-line.data {
+            stroke: #10b981;
+        }
+
+        .connection-line.http {
+            stroke: #3b82f6;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 13px;
+            max-width: 320px;
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .tooltip-content {
+            color: #515154;
+            line-height: 1.6;
+        }
+
+        /* Legend */
+        .legend {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 16px;
+            padding: 20px;
+            z-index: 1000;
+            font-size: 13px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1d1d1f;
+            font-size: 14px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        /* SVG Arrow Marker */
+        .arrow-marker {
+            fill: #3b82f6;
+        }
+
+        .arrow-marker.event {
+            fill: #ec4899;
+        }
+
+        .arrow-marker.data {
+            fill: #10b981;
+        }
+
+        .connection-label {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            font-size: 11px;
+            font-weight: 500;
+            fill: #86868b;
+            pointer-events: none;
+        }
+
+        .connection-line.drawing {
+            stroke: #007AFF;
+            stroke-width: 4;
+            stroke-dasharray: 5,5;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .connection-line.deletable {
+            cursor: pointer;
+        }
+
+        .connection-line.deletable:hover {
+            stroke-width: 5.5;
+            filter: drop-shadow(0 3px 6px rgba(0, 122, 255, 0.4));
+        }
+
+        .drawing-mode {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 122, 255, 0.95);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 2000;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+            display: none;
+        }
+
+        .drawing-mode.active {
+            display: block;
+        }
+
+        .btn.active {
+            background: #007AFF;
+            color: white;
+            border-color: #007AFF;
+        }
+
+        /* Connection Type Dialog */
+        .connection-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 10000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            min-width: 300px;
+            display: none;
+        }
+
+        .connection-dialog.visible {
+            display: block;
+        }
+
+        .connection-dialog-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 16px;
+            color: #1d1d1f;
+        }
+
+        .connection-type-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .connection-type-option {
+            padding: 12px 16px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .connection-type-option:hover {
+            border-color: #007AFF;
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .connection-type-option.selected {
+            border-color: #007AFF;
+            background: rgba(0, 122, 255, 0.1);
+        }
+
+        .connection-type-color {
+            width: 20px;
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .connection-type-color.http {
+            background: #3b82f6;
+        }
+
+        .connection-type-color.data {
+            background: #10b981;
+        }
+
+        .connection-type-color.event {
+            background: #ec4899;
+        }
+
+        .connection-dialog-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .connection-dialog input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .connection-dialog input[type="text"]:focus {
+            outline: none;
+            border-color: #007AFF;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="bi bi-diagram-3"></i> Enterprise RAG Chat Bot - System Architecture</h1>
+        <div class="controls">
+            <button class="btn" id="drawModeBtn" onclick="toggleDrawMode()"><i class="bi bi-pencil"></i> Draw Connection</button>
+            <button class="btn" onclick="resetView()"><i class="bi bi-arrow-clockwise"></i> Reset View</button>
+            <button class="btn" onclick="zoomIn()"><i class="bi bi-zoom-in"></i> Zoom In</button>
+            <button class="btn" onclick="zoomOut()"><i class="bi bi-zoom-out"></i> Zoom Out</button>
+            <button class="btn" onclick="saveConnections()"><i class="bi bi-save"></i> Save</button>
+            <button class="btn" onclick="loadConnections()"><i class="bi bi-folder-open"></i> Load</button>
+            <button class="btn" onclick="resetLayout()"><i class="bi bi-arrow-counterclockwise"></i> Reset Layout</button>
+        </div>
+    </div>
+
+    <div class="canvas-container" id="canvasContainer">
+        <div class="canvas" id="canvas">
+            <svg id="connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+                <defs>
+                    <marker id="arrowhead-http" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" class="arrow-marker" />
+                    </marker>
+                    <marker id="arrowhead-data" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" class="arrow-marker data" />
+                    </marker>
+                    <marker id="arrowhead-event" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" class="arrow-marker event" />
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <div class="drawing-mode" id="drawingMode">
+        <i class="bi bi-info-circle"></i> Draw Mode: Click on any port of source node, then click on any port of target node. Press ESC to cancel.
+    </div>
+
+    <!-- Connection Type Dialog -->
+    <div class="connection-dialog" id="connectionDialog">
+        <div class="connection-dialog-title">Select Connection Type</div>
+        <div class="connection-type-options" id="connectionTypeOptions">
+            <div class="connection-type-option" data-type="http">
+                <div class="connection-type-color http"></div>
+                <span>HTTP Request</span>
+            </div>
+            <div class="connection-type-option" data-type="data">
+                <div class="connection-type-color data"></div>
+                <span>Data Flow</span>
+            </div>
+            <div class="connection-type-option" data-type="event">
+                <div class="connection-type-color event"></div>
+                <span>Event Stream (Kafka)</span>
+            </div>
+        </div>
+        <input type="text" id="connectionLabel" placeholder="Connection label (optional)">
+        <div class="connection-dialog-actions">
+            <button class="btn" onclick="cancelConnectionDialog()">Cancel</button>
+            <button class="btn" onclick="confirmConnectionDialog()" style="background: #007AFF; color: white;">Confirm</button>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-title">Connection Types</div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #3b82f6;"></div>
+            <span>HTTP Request</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #10b981;"></div>
+            <span>Data Flow</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ec4899;"></div>
+            <span>Event Stream (Kafka)</span>
+        </div>
+    </div>
+
+    <script>
+        const nodes = [
+            // Layer 1: Frontend (Top Center)
+            {
+                id: 'frontend',
+                type: 'frontend',
+                title: 'Frontend',
+                subtitle: 'React Web Application',
+                x: 1000,
+                y: 100,
+                content: `
+                    <ul>
+                        <li>React + TypeScript</li>
+                        <li>User Interface & Dashboard</li>
+                        <li>Real-time Chat Interface</li>
+                        <li>Authentication & Session Management</li>
+                    </ul>
+                `,
+                tooltip: 'Frontend is the React web application providing user interface, dashboard, and real-time chat capabilities.',
+                icon: 'bi-window'
+            },
+            // Layer 2: API Gateway (Below Frontend)
+            {
+                id: 'api_gateway',
+                type: 'gateway',
+                title: 'API Gateway',
+                subtitle: 'Python (Port 8080)',
+                x: 1000,
+                y: 400,
+                content: `
+                    <ul>
+                        <li>Request Routing</li>
+                        <li>Authentication/Authorization</li>
+                        <li>Rate Limiting</li>
+                        <li>Load Balancing</li>
+                        <li>CORS Handling</li>
+                    </ul>
+                `,
+                tooltip: 'Python API Gateway (e.g. FastAPI) handles request routing, authentication, authorization, rate limiting, load balancing, and CORS. Acts as the entry point for all client and transcription-bot requests.',
+                icon: 'bi-shield-check'
+            },
+            // MongoDB next to API Gateway
+            {
+                id: 'mongodb_gateway',
+                type: 'database',
+                title: 'MongoDB',
+                subtitle: 'User & Session DB',
+                x: 1300,
+                y: 400,
+                content: `
+                    <ul>
+                        <li>User Accounts</li>
+                        <li>Session Tokens</li>
+                        <li>API Keys</li>
+                        <li>Access Logs</li>
+                    </ul>
+                `,
+                tooltip: 'MongoDB database for user accounts, session tokens, API keys, and access logs, connected to API Gateway.',
+                icon: 'bi-database-fill'
+            },
+            // Layer 3: Orchestrator
+            {
+                id: 'orchestrator',
+                type: 'orchestrator',
+                title: 'Orchestrator',
+                subtitle: 'Python (Port 8081)',
+                x: 500,
+                y: 700,
+                content: `
+                    <ul>
+                        <li>LLM: Llama (Local)</li>
+                        <li>Intent Analysis (LLM)</li>
+                        <li>Agent Planning (LLM)</li>
+                        <li>Tool Orchestration</li>
+                        <li>Context Aggregation</li>
+                        <li>Final Response Generation</li>
+                        <li>Event Publishing (Kafka)</li>
+                    </ul>
+                `,
+                tooltip: 'Orchestrator service using local Llama LLM for intent analysis and agent planning. Orchestrates tool calls, aggregates context, generates final responses, and publishes events to Kafka.',
+                icon: 'bi-diagram-3-fill'
+            },
+            // Weaviate next to Orchestrator
+            {
+                id: 'weaviate_orch',
+                type: 'database',
+                title: 'Weaviate',
+                subtitle: 'Vector Database',
+                x: 200,
+                y: 700,
+                content: `
+                    <ul>
+                        <li>Vector Storage</li>
+                        <li>Semantic Search</li>
+                        <li>RAG Knowledge Base</li>
+                        <li>Embeddings Store</li>
+                    </ul>
+                `,
+                tooltip: 'Weaviate vector database for semantic search and RAG knowledge base, connected to the Orchestrator.',
+                icon: 'bi-collection'
+            },
+            // MongoDB next to Orchestrator
+            {
+                id: 'mongodb_orch',
+                type: 'database',
+                title: 'MongoDB',
+                subtitle: 'Document Database',
+                x: 800,
+                y: 700,
+                content: `
+                    <ul>
+                        <li>Session Storage</li>
+                        <li>Chat History</li>
+                        <li>User Context</li>
+                        <li>Document Store</li>
+                    </ul>
+                `,
+                tooltip: 'MongoDB document database for session storage, chat history, and user context, connected to the Orchestrator.',
+                icon: 'bi-database-fill'
+            },
+            // Redis next to Orchestrator
+            {
+                id: 'redis_orch',
+                type: 'database',
+                title: 'Redis',
+                subtitle: 'Cache & Queue',
+                x: 800,
+                y: 550,
+                content: `
+                    <ul>
+                        <li>Response Cache</li>
+                        <li>Session Cache</li>
+                        <li>Rate Limiting</li>
+                        <li>Pub/Sub Messaging</li>
+                    </ul>
+                `,
+                tooltip: 'Redis for caching responses, session data, rate limiting, and pub/sub messaging, connected to the Orchestrator.',
+                icon: 'bi-lightning-fill'
+            },
+            // Kafka between Orchestrator and Backend
+            {
+                id: 'kafka_orch',
+                type: 'queue',
+                title: 'Kafka',
+                subtitle: 'Message Queue',
+                x: 500,
+                y: 900,
+                content: `
+                    <ul>
+                        <li>Event Streaming</li>
+                        <li>Async Communication</li>
+                        <li>Decoupling Services</li>
+                        <li>Topic: orch-backend</li>
+                    </ul>
+                `,
+                tooltip: 'Kafka message queue for async communication between Orchestrator and Backend services.',
+                icon: 'bi-broadcast'
+            },
+            // Backend Service
+            {
+                id: 'backend',
+                type: 'service',
+                title: 'Backend Service',
+                subtitle: 'Python (Port 8082)',
+                x: 500,
+                y: 1100,
+                content: `
+                    <ul>
+                        <li>Business Logic</li>
+                        <li>Data Processing</li>
+                        <li>Integration Layer</li>
+                        <li>API Services</li>
+                    </ul>
+                `,
+                tooltip: 'Backend service handling business logic, data processing, and integration with external services.',
+                icon: 'bi-gear-fill'
+            },
+            // Layer 5: Databases (Bottom)
+            {
+                id: 'mongodb',
+                type: 'database',
+                title: 'MongoDB',
+                subtitle: 'Analytics Database',
+                x: 700,
+                y: 1300,
+                content: `
+                    <ul>
+                        <li>Collections:</li>
+                        <li>• analytics_events</li>
+                        <li>• analytics_metrics</li>
+                        <li>• time_series</li>
+                        <li>Flexible Schema</li>
+                        <li>Native JSON/BSON</li>
+                        <li>Time-Series Built-in</li>
+                        <li>High Write Throughput</li>
+                    </ul>
+                `,
+                tooltip: 'MongoDB analytics database stores analytics events, metrics, and time-series data. Features flexible schema, native JSON/BSON support, built-in time-series capabilities, horizontal scaling, and high write throughput. Document model fits event data perfectly.',
+                icon: 'bi-database-fill'
+            },
+            // Layer 4: Event & Analytics (Below Services)
+            {
+                id: 'kafka',
+                type: 'queue',
+                title: 'Kafka',
+                subtitle: 'Event Streaming Platform',
+                x: 1000,
+                y: 1000,
+                content: `
+                    <ul>
+                        <li>Event Storage</li>
+                        <li>Event Distribution</li>
+                        <li>Decoupling Services</li>
+                        <li>Async Message Queue</li>
+                        <li>Topic: rag-events</li>
+                    </ul>
+                `,
+                tooltip: 'Kafka event streaming platform provides event storage, distribution, and decoupling between services. Acts as an asynchronous message queue with topic rag-events for event-driven architecture.',
+                icon: 'bi-broadcast'
+            },
+            {
+                id: 'dataflow',
+                type: 'analytics',
+                title: 'Dataflow',
+                subtitle: 'Python',
+                x: 1500,
+                y: 1000,
+                content: `
+                    <ul>
+                        <li>Consume Events from Kafka</li>
+                        <li>Aggregate Metrics</li>
+                        <li>Calculate Statistics</li>
+                        <li>Transform Data</li>
+                        <li>Time-series Processing</li>
+                        <li>Write Analytics to MongoDB</li>
+                    </ul>
+                `,
+                tooltip: 'Dataflow pipeline consumes events from Kafka asynchronously. Aggregates metrics, calculates statistics, transforms data, performs time-series processing, and writes analytics to MongoDB.',
+                icon: 'bi-graph-up-arrow'
+            }
+        ];
+
+        const connections = []; // Không có kết nối mặc định, người dùng tự vẽ
+
+        let selectedNode = null;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        let currentZoom = 0.75; // Zoom level (0.75 = zoom out less)
+        let isDrawMode = false;
+        let drawingConnection = null;
+        let tempLine = null;
+
+        const canvas = document.getElementById('canvas');
+        const connectionsSvg = document.getElementById('connections');
+        const tooltip = document.getElementById('tooltip');
+        const drawingModeIndicator = document.getElementById('drawingMode');
+
+        function createNode(nodeData) {
+            const node = document.createElement('div');
+            node.className = `node node-type-${nodeData.type}`;
+            node.id = `node-${nodeData.id}`;
+            node.style.left = nodeData.x + 'px';
+            node.style.top = nodeData.y + 'px';
+
+            node.innerHTML = `
+                <div class="node-header">
+                    <div class="node-icon">
+                        <i class="bi ${nodeData.icon}"></i>
+                    </div>
+                    <div>
+                        <div class="node-title">${nodeData.title}</div>
+                        <div class="node-subtitle">${nodeData.subtitle}</div>
+                    </div>
+                </div>
+                <div class="node-content">${nodeData.content}</div>
+                <div class="node-ports input"></div>
+                <div class="node-ports output"></div>
+            `;
+
+            // Event listeners
+            node.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('node-ports')) {
+                    handlePortClick(e, node, nodeData, e.target);
+                } else {
+                    startDrag(e, node, nodeData);
+                }
+            });
+            node.addEventListener('mouseenter', () => showTooltip(node, nodeData));
+            node.addEventListener('mouseleave', () => hideTooltip());
+            node.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('node-ports')) {
+                    e.stopPropagation();
+                    
+                    // If drawing and clicking on a different node, complete connection
+                    if (drawingConnection && drawingConnection.from !== nodeData.id) {
+                        completeDrawingConnection(nodeData.id, node);
+                        return;
+                    }
+                    
+                    selectNode(node);
+                }
+            });
+
+            canvas.appendChild(node);
+        }
+
+        function handlePortClick(e, node, nodeData, port) {
+            e.stopPropagation();
+            e.preventDefault();
+            
+            // Auto-enable draw mode if not enabled
+            if (!isDrawMode) {
+                toggleDrawMode();
+            }
+
+            // If already drawing a connection
+            if (drawingConnection) {
+                // If clicking on a different node, complete the connection
+                if (drawingConnection.from !== nodeData.id) {
+                    console.log('Completing connection from', drawingConnection.from, 'to', nodeData.id);
+                    completeDrawingConnection(nodeData.id, node, port);
+                } else {
+                    // Clicked on same node, cancel
+                    console.log('Same node clicked, canceling');
+                    cancelDrawing();
+                }
+            } else {
+                // Start new connection from this port
+                console.log('Starting connection from', nodeData.id);
+                startDrawingConnection(nodeData.id, port, node);
+            }
+        }
+
+        // Helper function to get port position accurately from port element
+        function getPortPositionFromElement(nodeElement, portElement) {
+            const nodeX = parseFloat(nodeElement.style.left) || 0;
+            const nodeY = parseFloat(nodeElement.style.top) || 0;
+            const nodeWidth = nodeElement.offsetWidth;
+            const nodeHeight = nodeElement.offsetHeight;
+            
+            // Check if it's input (top) or output (bottom) port
+            const isOutput = portElement.classList.contains('output');
+            
+            if (isOutput) {
+                // Output port at bottom center
+                return {
+                    x: nodeX + nodeWidth / 2,
+                    y: nodeY + nodeHeight
+                };
+            } else {
+                // Input port at top center
+                return {
+                    x: nodeX + nodeWidth / 2,
+                    y: nodeY
+                };
+            }
+        }
+        
+        // Helper function to get port position (backward compatibility)
+        function getPortPosition(nodeElement, isOutput) {
+            const nodeX = parseFloat(nodeElement.style.left) || 0;
+            const nodeY = parseFloat(nodeElement.style.top) || 0;
+            const nodeWidth = nodeElement.offsetWidth;
+            const nodeHeight = nodeElement.offsetHeight;
+            
+            if (isOutput) {
+                return {
+                    x: nodeX + nodeWidth / 2,
+                    y: nodeY + nodeHeight
+                };
+            } else {
+                return {
+                    x: nodeX + nodeWidth / 2,
+                    y: nodeY
+                };
+            }
+        }
+
+        function startDrawingConnection(fromNodeId, port, nodeElement) {
+            console.log('startDrawingConnection called', fromNodeId);
+            
+            // Cancel any existing drawing
+            if (drawingConnection) {
+                cancelDrawing();
+            }
+            
+            drawingConnection = {
+                from: fromNodeId,
+                fromPort: port,
+                fromNode: nodeElement,
+                mouseMoveHandler: null
+            };
+
+            // Get accurate port position
+            const portPos = getPortPositionFromElement(nodeElement, port);
+            console.log('Starting from port position:', portPos);
+            
+            // Create temporary line in SVG
+            tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tempLine.setAttribute('x1', portPos.x);
+            tempLine.setAttribute('y1', portPos.y);
+            tempLine.setAttribute('x2', portPos.x);
+            tempLine.setAttribute('y2', portPos.y);
+            tempLine.setAttribute('class', 'connection-line drawing');
+            tempLine.setAttribute('stroke', '#007AFF');
+            tempLine.setAttribute('stroke-width', '4');
+            tempLine.setAttribute('stroke-dasharray', '5,5');
+            connectionsSvg.appendChild(tempLine);
+            console.log('Temp line created');
+
+            // Mouse move handler
+            const updateTempLine = (e) => {
+                if (!tempLine || !drawingConnection) return;
+                
+                const container = document.getElementById('canvasContainer');
+                const containerRect = container.getBoundingClientRect();
+                
+                // Convert mouse position to canvas coordinates
+                let mouseX = (e.clientX - containerRect.left + container.scrollLeft) / currentZoom;
+                let mouseY = (e.clientY - containerRect.top + container.scrollTop) / currentZoom;
+                
+                // Check if hovering over any port
+                const allNodes = document.querySelectorAll('.node');
+                allNodes.forEach(node => {
+                    if (node === nodeElement) return;
+                    
+                    const ports = node.querySelectorAll('.node-ports');
+                    ports.forEach(p => {
+                        const pPos = getPortPositionFromElement(node, p);
+                        const distance = Math.sqrt(
+                            Math.pow(mouseX - pPos.x, 2) + Math.pow(mouseY - pPos.y, 2)
+                        );
+                        
+                        if (distance < 30) {
+                            mouseX = pPos.x;
+                            mouseY = pPos.y;
+                            p.style.transform = 'translateX(-50%) scale(1.5)';
+                            p.style.zIndex = '20';
+                        } else {
+                            p.style.transform = 'translateX(-50%) scale(1)';
+                            p.style.zIndex = '10';
+                        }
+                    });
+                });
+                
+                tempLine.setAttribute('x2', mouseX);
+                tempLine.setAttribute('y2', mouseY);
+            };
+
+            // Add event listeners
+            const mouseMoveHandler = updateTempLine;
+            document.addEventListener('mousemove', mouseMoveHandler);
+            drawingConnection.mouseMoveHandler = mouseMoveHandler;
+            
+            // ESC to cancel
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape') {
+                    cancelDrawing();
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+            drawingConnection.escapeHandler = escapeHandler;
+        }
+
+        let pendingConnection = null;
+
+        function completeDrawingConnection(toNodeId, toNodeElement, toPort) {
+            console.log('completeDrawingConnection called', toNodeId);
+            
+            if (!drawingConnection) {
+                console.log('No drawing connection active');
+                return;
+            }
+
+            // Get target node element if not provided
+            if (!toNodeElement) {
+                toNodeElement = document.getElementById(`node-${toNodeId}`);
+            }
+            
+            if (!toNodeElement) {
+                console.log('Target node not found');
+                return;
+            }
+
+            // Get target port if not provided
+            if (!toPort) {
+                toPort = toNodeElement.querySelector('.node-ports.input') || 
+                         toNodeElement.querySelector('.node-ports.output') ||
+                         toNodeElement.querySelector('.node-ports');
+            }
+
+            // Snap temp line to target port
+            const targetPortPos = toPort ? getPortPositionFromElement(toNodeElement, toPort) : getPortPosition(toNodeElement, false);
+            console.log('Snapping to port position:', targetPortPos);
+            
+            if (tempLine) {
+                tempLine.setAttribute('x2', targetPortPos.x);
+                tempLine.setAttribute('y2', targetPortPos.y);
+            }
+
+            // Cleanup event listeners
+            if (drawingConnection.mouseMoveHandler) {
+                document.removeEventListener('mousemove', drawingConnection.mouseMoveHandler);
+            }
+            if (drawingConnection.escapeHandler) {
+                document.removeEventListener('keydown', drawingConnection.escapeHandler);
+            }
+
+            // Store pending connection info
+            pendingConnection = {
+                from: drawingConnection.from,
+                to: toNodeId
+            };
+
+            // Reset port styles
+            document.querySelectorAll('.node-ports').forEach(p => {
+                p.style.transform = 'translateX(-50%) scale(1)';
+                p.style.zIndex = '10';
+            });
+
+            // Show dialog
+            const dialog = document.getElementById('connectionDialog');
+            if (!dialog) {
+                console.error('Connection dialog not found');
+                return;
+            }
+            
+            const options = document.querySelectorAll('.connection-type-option');
+            options.forEach(opt => opt.classList.remove('selected'));
+            if (options[1]) options[1].classList.add('selected'); // Default to 'data'
+            
+            const labelInput = document.getElementById('connectionLabel');
+            if (labelInput) labelInput.value = '';
+
+            dialog.classList.add('visible');
+            console.log('Dialog shown');
+
+            // Add click handlers for type selection
+            options.forEach(option => {
+                option.onclick = () => {
+                    options.forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+                };
+            });
+        }
+
+        function confirmConnectionDialog() {
+            if (!pendingConnection) return;
+
+            const selectedOption = document.querySelector('.connection-type-option.selected');
+            if (!selectedOption) {
+                alert('Please select a connection type!');
+                return;
+            }
+
+            const connectionType = selectedOption.getAttribute('data-type');
+            const label = document.getElementById('connectionLabel').value.trim();
+
+            // Remove temp line and cleanup
+            if (tempLine) {
+                tempLine.remove();
+                tempLine = null;
+            }
+            
+            // Remove mouse move handler
+            if (drawingConnection && drawingConnection.mouseMoveHandler) {
+                document.removeEventListener('mousemove', drawingConnection.mouseMoveHandler);
+            }
+            
+            // Reset all port styles
+            document.querySelectorAll('.node-ports').forEach(port => {
+                port.style.transform = 'translateX(-50%) scale(1)';
+                port.style.zIndex = '10';
+            });
+
+            // Add new connection
+            const newConnection = {
+                from: pendingConnection.from,
+                to: pendingConnection.to,
+                type: connectionType,
+                label: label
+            };
+
+            // Check if connection already exists
+            const exists = connections.some(c => 
+                c.from === newConnection.from && c.to === newConnection.to
+            );
+
+            if (!exists) {
+                connections.push(newConnection);
+                updateConnections();
+                saveConnectionsToStorage();
+            } else {
+                alert('This connection already exists!');
+            }
+
+            // Close dialog
+            document.getElementById('connectionDialog').classList.remove('visible');
+            pendingConnection = null;
+            drawingConnection = null;
+        }
+
+        function cancelConnectionDialog() {
+            document.getElementById('connectionDialog').classList.remove('visible');
+            cancelDrawing();
+            pendingConnection = null;
+        }
+
+        function cancelDrawing() {
+            console.log('cancelDrawing called');
+            
+            // Remove temp line
+            if (tempLine) {
+                tempLine.remove();
+                tempLine = null;
+            }
+            
+            // Remove event listeners
+            if (drawingConnection) {
+                if (drawingConnection.mouseMoveHandler) {
+                    document.removeEventListener('mousemove', drawingConnection.mouseMoveHandler);
+                }
+                if (drawingConnection.escapeHandler) {
+                    document.removeEventListener('keydown', drawingConnection.escapeHandler);
+                }
+            }
+            
+            // Reset all port styles
+            document.querySelectorAll('.node-ports').forEach(port => {
+                port.style.transform = 'translateX(-50%) scale(1)';
+                port.style.zIndex = '10';
+            });
+            
+            drawingConnection = null;
+            pendingConnection = null;
+        }
+
+        function toggleDrawMode() {
+            isDrawMode = !isDrawMode;
+            const btn = document.getElementById('drawModeBtn');
+            if (isDrawMode) {
+                btn.classList.add('active');
+                drawingModeIndicator.classList.add('active');
+                canvas.classList.add('draw-mode');
+            } else {
+                btn.classList.remove('active');
+                drawingModeIndicator.classList.remove('active');
+                canvas.classList.remove('draw-mode');
+                cancelDrawing();
+            }
+        }
+
+        function startDrag(e, node, nodeData) {
+            if (e.target.classList.contains('node-ports')) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            isDragging = true;
+            selectedNode = node;
+            selectNode(node);
+            
+            // Get current node position (in canvas coordinates, accounting for zoom)
+            const nodeX = parseFloat(node.style.left) || nodeData.x;
+            const nodeY = parseFloat(node.style.top) || nodeData.y;
+            
+            // Get mouse position relative to canvas (accounting for zoom and scroll)
+            const container = document.getElementById('canvasContainer');
+            const containerRect = container.getBoundingClientRect();
+            const mouseX = (e.clientX - containerRect.left + container.scrollLeft) / currentZoom;
+            const mouseY = (e.clientY - containerRect.top + container.scrollTop) / currentZoom;
+            
+            // Calculate offset from mouse to node top-left corner
+            dragOffset.x = mouseX - nodeX;
+            dragOffset.y = mouseY - nodeY;
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function drag(e) {
+            if (!isDragging || !selectedNode) return;
+            
+            e.preventDefault();
+
+            // Get mouse position relative to canvas (accounting for zoom and scroll)
+            const container = document.getElementById('canvasContainer');
+            const containerRect = container.getBoundingClientRect();
+            const mouseX = (e.clientX - containerRect.left + container.scrollLeft) / currentZoom;
+            const mouseY = (e.clientY - containerRect.top + container.scrollTop) / currentZoom;
+            
+            // Calculate new node position
+            const newX = mouseX - dragOffset.x;
+            const newY = mouseY - dragOffset.y;
+            
+            // Update node position
+            selectedNode.style.left = newX + 'px';
+            selectedNode.style.top = newY + 'px';
+
+            updateConnections();
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+            saveConnectionsToStorage();
+        }
+
+        function selectNode(node) {
+            document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+            node.classList.add('selected');
+        }
+
+        function showTooltip(node, nodeData) {
+            const rect = node.getBoundingClientRect();
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${nodeData.title}</div>
+                <div class="tooltip-content">${nodeData.tooltip}</div>
+            `;
+            tooltip.style.left = (rect.left + rect.width + 10) + 'px';
+            tooltip.style.top = rect.top + 'px';
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            tooltip.classList.remove('visible');
+        }
+
+
+        // Grid size (must match CSS background-size)
+        const GRID_SIZE = 30;
+
+        // Snap to grid
+        function snapToGrid(value) {
+            return Math.round(value / GRID_SIZE) * GRID_SIZE;
+        }
+
+        // Calculate straight line path (direct connection from port to port)
+        function calculateOrthogonalPath(fromX, fromY, toX, toY, connectionIndex, totalConnections, connectionType) {
+            // Return only start and end points for a straight line
+            return [
+                { x: fromX, y: fromY },
+                { x: toX, y: toY }
+            ];
+        }
+
+        function updateConnections() {
+            // Clear all connections except temp line
+            const tempLineElement = connectionsSvg.querySelector('.drawing');
+            connectionsSvg.innerHTML = '';
+            
+            // Re-add markers (larger size for thicker lines)
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const markerHttp = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            markerHttp.setAttribute('id', 'arrowhead-http');
+            markerHttp.setAttribute('markerWidth', '16');
+            markerHttp.setAttribute('markerHeight', '16');
+            markerHttp.setAttribute('refX', '14');
+            markerHttp.setAttribute('refY', '5');
+            markerHttp.setAttribute('orient', 'auto');
+            markerHttp.setAttribute('markerUnits', 'userSpaceOnUse');
+            const polygonHttp = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygonHttp.setAttribute('points', '0 0, 16 5, 0 10');
+            polygonHttp.setAttribute('class', 'arrow-marker');
+            markerHttp.appendChild(polygonHttp);
+            defs.appendChild(markerHttp);
+
+            const markerData = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            markerData.setAttribute('id', 'arrowhead-data');
+            markerData.setAttribute('markerWidth', '16');
+            markerData.setAttribute('markerHeight', '16');
+            markerData.setAttribute('refX', '14');
+            markerData.setAttribute('refY', '5');
+            markerData.setAttribute('orient', 'auto');
+            markerData.setAttribute('markerUnits', 'userSpaceOnUse');
+            const polygonData = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygonData.setAttribute('points', '0 0, 16 5, 0 10');
+            polygonData.setAttribute('class', 'arrow-marker data');
+            markerData.appendChild(polygonData);
+            defs.appendChild(markerData);
+
+            const markerEvent = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            markerEvent.setAttribute('id', 'arrowhead-event');
+            markerEvent.setAttribute('markerWidth', '16');
+            markerEvent.setAttribute('markerHeight', '16');
+            markerEvent.setAttribute('refX', '14');
+            markerEvent.setAttribute('refY', '5');
+            markerEvent.setAttribute('orient', 'auto');
+            markerEvent.setAttribute('markerUnits', 'userSpaceOnUse');
+            const polygonEvent = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygonEvent.setAttribute('points', '0 0, 16 5, 0 10');
+            polygonEvent.setAttribute('class', 'arrow-marker event');
+            markerEvent.appendChild(polygonEvent);
+            defs.appendChild(markerEvent);
+
+            connectionsSvg.appendChild(defs);
+
+            // Re-add temp line if exists
+            if (tempLineElement) {
+                connectionsSvg.appendChild(tempLineElement);
+            }
+
+            // Group connections by from-to pairs for better offset calculation
+            const connectionGroups = {};
+            connections.forEach((conn, index) => {
+                const groupKey = `${conn.from}-${conn.to}`;
+                if (!connectionGroups[groupKey]) {
+                    connectionGroups[groupKey] = [];
+                }
+                connectionGroups[groupKey].push({ conn, index });
+            });
+
+            // Draw all connections
+            connections.forEach((conn, index) => {
+                const fromNode = document.getElementById(`node-${conn.from}`);
+                const toNode = document.getElementById(`node-${conn.to}`);
+
+                if (!fromNode || !toNode) return;
+
+                // Get node positions directly from style (more accurate, accounts for zoom)
+                const fromNodeX = parseFloat(fromNode.style.left) || 0;
+                const fromNodeY = parseFloat(fromNode.style.top) || 0;
+                const fromNodeWidth = fromNode.offsetWidth;
+                const fromNodeHeight = fromNode.offsetHeight;
+                
+                const toNodeX = parseFloat(toNode.style.left) || 0;
+                const toNodeY = parseFloat(toNode.style.top) || 0;
+                const toNodeWidth = toNode.offsetWidth;
+                
+                // Calculate port positions (output port at bottom center, input port at top center)
+                // Ports are positioned at center horizontally, top/bottom vertically
+                const fromX = fromNodeX + fromNodeWidth / 2;
+                const fromY = fromNodeY + fromNodeHeight; // Bottom of node (output port)
+                const toX = toNodeX + toNodeWidth / 2;
+                const toY = toNodeY; // Top of node (input port)
+
+                // Find position in group for this connection
+                const groupKey = `${conn.from}-${conn.to}`;
+                const group = connectionGroups[groupKey] || [];
+                const groupIndex = group.findIndex(g => g.index === index);
+                const totalInGroup = group.length;
+
+                // Create path using improved orthogonal routing
+                const path = calculateOrthogonalPath(fromX, fromY, toX, toY, groupIndex, totalInGroup, conn.type);
+                
+                // Create SVG path
+                const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                let pathData = `M ${path[0].x} ${path[0].y}`;
+                for (let i = 1; i < path.length; i++) {
+                    pathData += ` L ${path[i].x} ${path[i].y}`;
+                }
+                pathElement.setAttribute('d', pathData);
+                pathElement.setAttribute('class', `connection-line ${conn.type} deletable`);
+                pathElement.setAttribute('data-connection-index', index);
+                pathElement.setAttribute('marker-end', `url(#arrowhead-${conn.type})`);
+                
+                // Add click handler for deletion
+                pathElement.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    if (confirm('Delete this connection?')) {
+                        connections.splice(index, 1);
+                        updateConnections();
+                        saveConnectionsToStorage();
+                    }
+                });
+
+                connectionsSvg.appendChild(pathElement);
+
+                // Add label if exists (positioned at middle horizontal segment)
+                if (conn.label) {
+                    // Find the middle horizontal segment for better label placement
+                    let labelX, labelY;
+                    if (path.length >= 3) {
+                        // Use the middle horizontal segment (usually index 2 or 3)
+                        const midIndex = Math.floor(path.length / 2);
+                        const labelPoint = path[midIndex];
+                        labelX = labelPoint.x;
+                        labelY = labelPoint.y - 8; // Offset above the line
+                    } else {
+                        // Fallback to first point
+                        labelX = path[0].x;
+                        labelY = path[0].y - 8;
+                    }
+                    
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', labelX);
+                    label.setAttribute('y', labelY);
+                    label.setAttribute('class', 'connection-label');
+                    label.setAttribute('text-anchor', 'middle');
+                    label.setAttribute('dominant-baseline', 'middle');
+                    label.textContent = conn.label;
+                    connectionsSvg.appendChild(label);
+                }
+            });
+        }
+
+        function resetView() {
+            const container = document.getElementById('canvasContainer');
+            container.scrollLeft = 0;
+            container.scrollTop = 0;
+            currentZoom = 0.75; // Reset to default zoom
+            canvas.style.transform = `scale(${currentZoom})`;
+            canvas.style.transformOrigin = 'top left';
+            setTimeout(updateConnections, 100);
+        }
+
+        function resetLayout() {
+            if (confirm('Reset layout to default? Saved node positions and connections will be deleted.')) {
+                localStorage.removeItem('systemArchitecture');
+                location.reload();
+            }
+        }
+
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 0.1, 2);
+            canvas.style.transform = `scale(${currentZoom})`;
+            canvas.style.transformOrigin = 'top left';
+            setTimeout(updateConnections, 100);
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 0.1, 0.5);
+            canvas.style.transform = `scale(${currentZoom})`;
+            canvas.style.transformOrigin = 'top left';
+            setTimeout(updateConnections, 100);
+        }
+
+        function saveConnections() {
+            const data = {
+                connections: connections,
+                nodes: nodes.map(n => ({
+                    id: n.id,
+                    x: parseInt(document.getElementById(`node-${n.id}`).style.left),
+                    y: parseInt(document.getElementById(`node-${n.id}`).style.top)
+                }))
+            };
+            localStorage.setItem('systemArchitecture', JSON.stringify(data));
+            alert('Saved successfully!');
+        }
+
+        function loadConnections() {
+            const saved = localStorage.getItem('systemArchitecture');
+            if (!saved) {
+                alert('No saved data found!');
+                return;
+            }
+            
+            if (confirm('Load saved data? Current data will be overwritten.')) {
+                const data = JSON.parse(saved);
+                
+                // Restore node positions
+                if (data.nodes) {
+                    data.nodes.forEach(savedNode => {
+                        const nodeElement = document.getElementById(`node-${savedNode.id}`);
+                        if (nodeElement) {
+                            nodeElement.style.left = savedNode.x + 'px';
+                            nodeElement.style.top = savedNode.y + 'px';
+                        }
+                    });
+                }
+                
+                // Restore connections
+                if (data.connections) {
+                    connections.length = 0;
+                    connections.push(...data.connections);
+                }
+                
+                updateConnections();
+                alert('Loaded successfully!');
+            }
+        }
+
+        function saveConnectionsToStorage() {
+            const data = {
+                connections: connections,
+                nodes: nodes.map(n => ({
+                    id: n.id,
+                    x: parseInt(document.getElementById(`node-${n.id}`).style.left) || n.x,
+                    y: parseInt(document.getElementById(`node-${n.id}`).style.top) || n.y
+                }))
+            };
+            localStorage.setItem('systemArchitecture', JSON.stringify(data));
+        }
+
+        // Initialize
+        nodes.forEach(node => createNode(node));
+        
+        // Load saved data
+        const saved = localStorage.getItem('systemArchitecture');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                
+                // Restore node positions
+                if (data.nodes) {
+                    data.nodes.forEach(savedNode => {
+                        const nodeElement = document.getElementById(`node-${savedNode.id}`);
+                        if (nodeElement && savedNode.x && savedNode.y) {
+                            nodeElement.style.left = savedNode.x + 'px';
+                            nodeElement.style.top = savedNode.y + 'px';
+                        }
+                    });
+                }
+                
+                // Restore connections
+                if (data.connections && data.connections.length > 0) {
+                    connections.length = 0;
+                    connections.push(...data.connections);
+                }
+            } catch (e) {
+                console.error('Error loading saved data:', e);
+            }
+        }
+        
+        // Apply initial zoom
+        canvas.style.transform = `scale(${currentZoom})`;
+        canvas.style.transformOrigin = 'top left';
+        
+        // Wait for nodes to render, then draw connections
+        setTimeout(() => {
+            updateConnections();
+        }, 100);
+
+        // Update connections on scroll and resize
+        const container = document.getElementById('canvasContainer');
+        container.addEventListener('scroll', updateConnections);
+        window.addEventListener('resize', updateConnections);
+
+        // Click outside to deselect
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.node')) {
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // ESC to cancel drawing, close dialog, or exit draw mode
+            if (e.key === 'Escape') {
+                const dialog = document.getElementById('connectionDialog');
+                if (dialog.classList.contains('visible')) {
+                    cancelConnectionDialog();
+                } else if (drawingConnection) {
+                    cancelDrawing();
+                } else if (isDrawMode) {
+                    toggleDrawMode();
+                }
+            }
+            // Enter to confirm dialog
+            if (e.key === 'Enter' && document.getElementById('connectionDialog').classList.contains('visible')) {
+                confirmConnectionDialog();
+            }
+            // Delete key to remove selected connections (if we add selection)
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                // Could add connection selection feature here
+            }
+        });
+
+        // Close dialog when clicking outside
+        document.addEventListener('click', (e) => {
+            const dialog = document.getElementById('connectionDialog');
+            if (dialog.classList.contains('visible') && !dialog.contains(e.target)) {
+                cancelConnectionDialog();
+            }
+        });
+    </script>
+</body>
+</html>

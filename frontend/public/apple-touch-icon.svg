@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A84FF"/>
+      <stop offset="50%" stop-color="#5E5CE6"/>
+      <stop offset="100%" stop-color="#BF5AF2"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="url(#bg)"/>
+  <path d="M126 42 l4 12 12 4 -12 4 -4 12 -4-12-12-4 12-4z" fill="rgba(255,255,255,0.5)"/>
+  <text x="90" y="125" font-family="-apple-system, sans-serif" font-size="100" font-weight="700" fill="white" text-anchor="middle">A</text>
+</svg>

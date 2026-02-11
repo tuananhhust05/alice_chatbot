@@ -1,0 +1,1 @@
+- Chia nhỏ , scale từng phần => Apply được cho mọi service trong hệ thống: kafka, redis , ochestrator
