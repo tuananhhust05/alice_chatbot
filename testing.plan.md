@@ -1,105 +1,153 @@
-0. Unit test for frontend, backend, ochestrator, dataflow 
+# Alice Chatbot Testing Plan
 
-1. Integration test (rất quan trọng)
-- Unit test là chưa đủ vì chatbot hỏng thường do ghép hệ thống.
-Nên test:
-- FE ↔ Backend (API contract, schema, timeout)
-- Backend ↔ LLM provider (OpenAI / Azure / internal LLM)
-- Orchestrator ↔ tools (search, DB, RAG, workflow engine)
-Dataflow end-to-end:
-- user input → preprocess → intent → tool call → postprocess → response
-👉 Tip: mock LLM ở mức semantic, không chỉ mock string.
+## 0. Unit Tests
 
-2. Conversation / Dialogue test (stateful test)
-- Chatbot ≠ API stateless.
+Unit tests for each service:
+- **Frontend**: React components, hooks, utilities
+- **Backend**: API endpoints, authentication, validation
+- **Orchestrator**: Agent logic, tool execution, workflow
+- **Dataflow**: Data processing, Kafka consumers, embeddings
 
-Test các case:
-- Multi-turn conversation (context có bị trôi không)
-- Người dùng đổi ý giữa chừng
-- Follow-up mơ hồ (“ý tôi là cái ở trên”)
-- Conversation reset / expire session
-- Parallel conversations (same user, multi tab)
+---
 
-👉 Có thể define conversation script:
+## 1. Integration Tests (Critical)
+
+Unit tests alone are insufficient - chatbots often break during system integration.
+
+### Key Integration Points
+- **Frontend ↔ Backend**: API contract, schema validation, timeout handling
+- **Backend ↔ LLM Provider**: OpenAI / Azure / internal LLM communication
+- **Orchestrator ↔ Tools**: Search, database, RAG, workflow engine
+
+### End-to-End Dataflow
+```
+user input → preprocess → intent detection → tool call → postprocess → response
+```
+
+> **Tip**: Mock LLM at semantic level, not just string matching.
+
+---
+
+## 2. Conversation / Dialogue Tests (Stateful)
+
+Chatbots are NOT stateless APIs - conversation state matters.
+
+### Test Cases
+- **Multi-turn conversation**: Does context drift over turns?
+- **User changes intent mid-conversation**: Handle gracefully?
+- **Ambiguous follow-ups**: "I meant the one above"
+- **Session management**: Conversation reset / session expiration
+- **Parallel conversations**: Same user, multiple tabs
+
+### Conversation Script Format
+```
 User: A
 Bot: ...
-User: B (ref A)
+User: B (references A)
 Expected intent: X
+Expected response contains: Y
+```
 
-3. Prompt & LLM behavior test
-Đây là phần nhiều team bỏ sót.
+---
 
-Prompt regression test
-- Khi sửa prompt → output có bị “lệch tính cách / policy” không
-- Snapshot test cho prompt + expected traits (không snapshot full text)
+## 3. Prompt & LLM Behavior Tests
 
-Non-deterministic test
-- Chạy 20–50 lần cùng input
-- Assert theo rule:
-  + Có/không có thông tin nhạy cảm
-  + Có cấu trúc đúng (JSON, bullet, step)
-  + Không hallucinate domain cấm
+Often overlooked but critical for chatbot quality.
 
-4. RAG & Data quality test
-Nếu có retrieval thì test data quan trọng hơn test code.
+### Prompt Regression Tests
+- When prompt changes → does output drift from expected personality/policy?
+- Snapshot tests for prompt + expected traits (not full text snapshots)
 
-Nên test:
-- Recall test: câu hỏi X có retrieve đúng doc không
-- Chunking test: chunk quá to / quá nhỏ
-- Embedding drift khi update model
-- Stale data / versioning
+### Non-Deterministic Tests
+- Run same input 20-50 times
+- Assert rules:
+  - No sensitive information leaked
+  - Correct structure (JSON, bullets, steps)
+  - No hallucination in restricted domains
 
-👉 Metrics hay dùng:
+---
+
+## 4. RAG & Data Quality Tests
+
+For retrieval-augmented systems, data quality > code quality.
+
+### Test Areas
+- **Recall test**: Does question X retrieve the correct documents?
+- **Chunking test**: Are chunks appropriately sized?
+- **Embedding drift**: Behavior changes when model updates
+- **Stale data**: Version control and freshness
+
+### Key Metrics
 - Precision@k
-- Answer grounded rate (answer có citation hay không)
+- Answer grounded rate (does answer have proper citations?)
 
-5. Security & Safety test (enterprise bắt buộc)
-Prompt injection
-- “Ignore previous instructions…”
-- User chèn instruction trong file upload
-- Tool hijacking (“call this tool with …”)
+---
 
-Data leakage
-- Chatbot có lộ PII không
-- Có leak system prompt không
-- Cross-tenant data access
+## 5. Security & Safety Tests (Enterprise Mandatory)
 
-6. Load & Cost test
-Chatbot enterprise chết nhiều vì… tiền 💸
+### Prompt Injection
+- "Ignore previous instructions..."
+- User injects instructions via file upload
+- Tool hijacking: "Call this tool with..."
 
-Test:
-- Concurrent users (burst traffic)
-- Token usage / conversation
-- Long conversation (token overflow)
-- Tool call storm (LLM gọi tool liên tục)
+### Data Leakage
+- Does chatbot leak PII?
+- Does chatbot expose system prompt?
+- Cross-tenant data access prevention
 
-👉 Assert:
-- max tokens
-- max tool calls / turn
-- graceful degradation (fallback answer)
+---
 
-7. UX & Human-in-the-loop test
-Không chỉ đúng – mà phải dùng được.
-- A/B test response style
-- Human review sample conversation
-- Test escalation (handoff sang human agent)
-- Test feedback loop (thumb up/down → retrain)
+## 6. Load & Cost Tests
 
-8. Observability test (rất enterprise)
-Test luôn cả khả năng debug khi prod lỗi:
-- Log có trace được 1 conversation không
-- Có correlation id xuyên FE → BE → LLM không
-- Reproduce được conversation từ log không
+Enterprise chatbots often fail due to cost, not bugs.
 
-9. Chaos / Failure test
+### Test Scenarios
+- **Concurrent users**: Burst traffic handling
+- **Token usage**: Per conversation token consumption
+- **Long conversations**: Token limit overflow
+- **Tool call storms**: LLM calling tools repeatedly
 
-Cố tình làm mọi thứ hỏng:
+### Assertions
+- Max tokens per conversation
+- Max tool calls per turn
+- Graceful degradation (fallback responses)
+
+---
+
+## 7. UX & Human-in-the-Loop Tests
+
+Correctness is not enough - usability matters.
+
+### Test Areas
+- **A/B testing**: Response style variations
+- **Human review**: Sample conversation quality checks
+- **Escalation**: Handoff to human agent
+- **Feedback loop**: Thumb up/down → retraining pipeline
+
+---
+
+## 8. Observability Tests (Enterprise Critical)
+
+Test the ability to debug production issues.
+
+### Requirements
+- Can a single conversation be traced through logs?
+- Is there a correlation ID across Frontend → Backend → LLM?
+- Can conversations be reproduced from logs?
+
+---
+
+## 9. Chaos / Failure Tests
+
+Intentionally break everything to test resilience.
+
+### Failure Scenarios
 - LLM timeout
-- Tool trả 500
-- Vector DB down
-- Partial response
+- Tool returns 500 error
+- Vector database down
+- Partial/incomplete response
 
-👉 Chatbot có:
-- Retry hợp lý?
-- Fallback?
-- Thông báo user rõ ràng?
+### Expected Behavior
+- Appropriate retry logic
+- Fallback responses
+- Clear user notifications
