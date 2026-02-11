@@ -13,8 +13,8 @@ class Settings(BaseSettings):
 
     # App
     SECRET_KEY: str = "change-me-in-production"
-    FRONTEND_URL: str = "http://localhost:3000"
-    BACKEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:3009"
+    BACKEND_URL: str = "http://localhost:8009"
     
     # Security
     SECURE_COOKIES: bool = False  # Set True in production with HTTPS

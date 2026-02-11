@@ -35,7 +35,7 @@ File này định nghĩa các mock responses cho từng API endpoint.
 ```typescript
 import { http, HttpResponse } from 'msw';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://localhost:8009';
 
 export const handlers = [
   // Khi có request POST đến /api/auth/google

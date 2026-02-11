@@ -524,6 +524,7 @@
             <button class="btn" onclick="zoomOut()"><i class="bi bi-zoom-out"></i> Zoom Out</button>
             <button class="btn" onclick="saveConnections()"><i class="bi bi-save"></i> Save</button>
             <button class="btn" onclick="loadConnections()"><i class="bi bi-folder-open"></i> Load</button>
+            <button class="btn" onclick="clearAllConnections()" style="background: #ff6b6b; color: white;"><i class="bi bi-trash"></i> Clear Connections</button>
             <button class="btn" onclick="resetLayout()"><i class="bi bi-arrow-counterclockwise"></i> Reset Layout</button>
         </div>
     </div>
@@ -749,25 +750,6 @@
                 `,
                 tooltip: 'Kafka message queue for async communication between Orchestrator and Backend services.',
                 icon: 'bi-broadcast'
-            },
-            // Backend Service
-            {
-                id: 'backend',
-                type: 'service',
-                title: 'Backend Service',
-                subtitle: 'Python (Port 8082)',
-                x: 500,
-                y: 1100,
-                content: `
-                    <ul>
-                        <li>Business Logic</li>
-                        <li>Data Processing</li>
-                        <li>Integration Layer</li>
-                        <li>API Services</li>
-                    </ul>
-                `,
-                tooltip: 'Backend service handling business logic, data processing, and integration with external services.',
-                icon: 'bi-gear-fill'
             },
             // Layer 5: Databases (Bottom)
             {
@@ -1503,6 +1485,20 @@
             if (confirm('Reset layout to default? Saved node positions and connections will be deleted.')) {
                 localStorage.removeItem('systemArchitecture');
                 location.reload();
+            }
+        }
+
+        function clearAllConnections() {
+            if (confirm('Clear all connections? This will remove all drawn connections.')) {
+                connections.length = 0;
+                updateConnections();
+                // Also clear from localStorage
+                const saved = localStorage.getItem('systemArchitecture');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    data.connections = [];
+                    localStorage.setItem('systemArchitecture', JSON.stringify(data));
+                }
             }
         }
 

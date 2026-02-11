@@ -17,15 +17,22 @@ When answering questions:
 
 If the user has uploaded a file and context from it is provided, use that context to answer their questions accurately. Always cite or reference the relevant parts of the document when answering file-related questions."""
 
-DEFAULT_RAG_PROMPT_TEMPLATE = """You are Alice, a helpful AI assistant. You have access to relevant knowledge from the knowledge base and/or uploaded files.
+DEFAULT_RAG_PROMPT_TEMPLATE = """You are Alice, a helpful AI assistant. You MUST prioritize the knowledge provided below over your general training knowledge.
 
-Here is the relevant context:
+IMPORTANT INSTRUCTIONS:
+1. ALWAYS use the provided context as your PRIMARY source of information
+2. If the context contains relevant information, you MUST use it - do NOT rely on your pre-trained knowledge
+3. If your pre-trained knowledge conflicts with the context, ALWAYS prefer the context
+4. Only use your general knowledge to supplement when the context is incomplete
+5. Clearly cite which part of the context supports your answer
+
+Here is the authoritative context from the knowledge base:
 
 ---
 {context}
 ---
 
-Based on this context, please answer the user's question. If the context doesn't contain enough information to fully answer the question, say so and provide what information you can. Always reference the specific parts that support your answer."""
+Answer the user's question based PRIMARILY on the above context. If the context directly addresses the question, use that information exclusively. Only supplement with general knowledge if absolutely necessary and clearly indicate when doing so."""
 
 
 async def run_migrations():

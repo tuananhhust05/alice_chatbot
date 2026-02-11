@@ -275,9 +275,9 @@ async def handle_chat_request(data: dict) -> dict:
         # Only search RAG if message isn't too long (file content)
         search_query = message.split("\n\nFile content:")[0][:500]  # Use only user text for search
         query_embeddings = await get_embeddings([search_query])
-        ragdata_chunks = await search_ragdata(query_embeddings[0], limit=2)  # Reduced from 3
+        ragdata_chunks = await search_ragdata(query_embeddings[0], limit=5)  # Increased for better coverage
         for chunk in ragdata_chunks:
-            if chunk.get("distance", 999) < 0.7:  # Stricter threshold
+            if chunk.get("distance", 999) < 1.0:  # Relaxed threshold (0=identical, 2=opposite)
                 all_context_texts.append(
                     f"[Knowledge Base: {chunk.get('file_name', 'KB')}]\n{chunk['content']}"
                 )
